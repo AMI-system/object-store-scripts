@@ -1,0 +1,10 @@
+aioboto3
+aiohttp
+asyncio
+boto3
+nest_asyncio
+pathlib
+requests
+tenacity
+tqdm
+yaspin
