@@ -269,8 +269,8 @@ async def upload_file_to_s3(session, presigned_url, file_path, file_type):
         with open(file_path, 'rb') as file:
             data = file.read()
             async with session.put(presigned_url, data=data, headers=headers) as response:
-                print(await response.text())
                 response.raise_for_status()
+                await response.text()
     except aiohttp.ClientError:
         pass
     except FileNotFoundError:
