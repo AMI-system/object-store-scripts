@@ -170,11 +170,18 @@ async def upload_files_in_batches(username, password, name, bucket, dep_id,
                 break
 
             progress_bar = tqdm.asyncio.tqdm(total=len(files_to_upload), desc='Uploading files')
-            for i in range(0, len(files_to_upload), batch_size):
-                batch = files_to_upload[i:i + batch_size]
+
+            if len(files_to_upload) <= batch_size:
                 await upload_files(session, username, password, name, bucket,
-                                   dep_id, data_type, batch)
-                progress_bar.update(len(batch))
+                                   dep_id, data_type, files_to_upload)
+                progress_bar.update(len(files_to_upload))
+            else:
+                for i in range(0, len(files_to_upload), batch_size):
+                    batch = files_to_upload[i:i + batch_size]
+                    await upload_files(session, username, password, name,
+                                       bucket, dep_id, data_type, batch)
+                    progress_bar.update(len(batch))
+
             progress_bar.close()
 
             # Update files list to only include those that still need to be checked
@@ -217,7 +224,6 @@ async def check_file_exist(session, username, password, name, bucket,
 async def upload_files(session, username, password, name, bucket, dep_id,
                        data_type, files):
     """Upload individual files."""
-    bucket = "test-upload"
     tasks = []
     for file_path in files:
         file_name, file_type = get_file_info(file_path)
@@ -225,9 +231,9 @@ async def upload_files(session, username, password, name, bucket, dep_id,
             presigned_url = await get_presigned_url(session, username,
                                                     password, name, bucket,
                                                     dep_id, data_type,
-                                                    file_name)
+                                                    file_name, file_type)
             task = upload_file_to_s3(session, presigned_url,
-                                     file_path, file_name, file_type)
+                                     file_path, file_type)
             tasks.append(task)
         except Exception as e:
             print(f"Error getting presigned URL for {file_name}: {e}")
@@ -237,15 +243,17 @@ async def upload_files(session, username, password, name, bucket, dep_id,
 
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
 async def get_presigned_url(session, username, password, name, bucket,
-                            dep_id, data_type, file_name):
+                            dep_id, data_type, file_name, file_type):
     """Get a presigned URL for file upload."""
     url = "https://connect-apps.ceh.ac.uk/ami-data-upload/generate-presigned-url/"
+
     data = FormData()
     data.add_field("name", name)
     data.add_field("country", bucket)
     data.add_field("deployment", dep_id)
     data.add_field("data_type", data_type)
     data.add_field("filename", file_name)
+    data.add_field("file_type", file_type)
 
     async with session.post(url, auth=BasicAuth(username, password),
                             data=data) as response:
@@ -254,14 +262,14 @@ async def get_presigned_url(session, username, password, name, bucket,
 
 
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
-async def upload_file_to_s3(session, presigned_url, file_path, file_name, file_type):
+async def upload_file_to_s3(session, presigned_url, file_path, file_type):
     """Upload file content to S3 using the presigned URL."""
     headers = {'Content-Type': file_type}
     try:
         with open(file_path, 'rb') as file:
             data = file.read()
             async with session.put(presigned_url, data=data, headers=headers) as response:
-                await response.text()
+                print(await response.text())
                 response.raise_for_status()
     except aiohttp.ClientError:
         pass
