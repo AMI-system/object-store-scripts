@@ -31,11 +31,16 @@ s3_client = boto3.client(
 )
 
 
-def get_deployments(username, password):
+# Global variables to store credentials
+GLOBAL_USERNAME = None
+GLOBAL_PASSWORD = None
+
+
+def get_deployments():
     """Fetch deployments from the API with authentication."""
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(url, auth=HTTPBasicAuth(username, password), timeout=600)
+        response = requests.get(url, auth=HTTPBasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD), timeout=600)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as err:
@@ -105,10 +110,13 @@ def display_menu():
     print("Bucket Files Information")
     print("============\n")
 
-    username = get_input("API Username")
-    password = getpass.getpass("API Password: ")
+    global GLOBAL_USERNAME, GLOBAL_PASSWORD
 
-    all_deployments = get_deployments(username, password)
+    if GLOBAL_USERNAME is None or GLOBAL_PASSWORD is None:
+        GLOBAL_USERNAME = get_input("API Username")
+        GLOBAL_PASSWORD = getpass.getpass("API Password: ")
+
+    all_deployments = get_deployments()
 
     countries = list(set([d["country"] for d in all_deployments if d["status"] == "active"]))
     country = get_choice("Countries:", countries)
@@ -134,6 +142,21 @@ def display_menu():
     print(
         f"\nTotal number of files for {country}, deployment {deployment} and data type {data_type}: {count}\n"
     )
+
+    prompt_next_action()
+
+
+def prompt_next_action():
+    """Prompt the user for the next action: check more deployments or leave."""
+    while True:
+        next_action = get_choice("\nWhat do you want to do next?", ["Check another deployment", "Leave"])
+        if next_action == "Check another deployment":
+            display_menu()
+        elif next_action == "Leave":
+            print("Goodbye!")
+            sys.exit(0)
+        else:
+            print("Invalid choice. Please try again.")
 
 
 if __name__ == '__main__':
