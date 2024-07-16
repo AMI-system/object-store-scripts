@@ -23,6 +23,9 @@ jobs:
       run: |
         echo "[MESSAGES CONTROL]" > .pylintrc
         echo "disable=duplicate-code" >> .pylintrc
+        echo "" >> .pylintrc
+        echo "[FORMAT]" >> .pylintrc
+        echo "max-line-length=120" >> .pylintrc
     - name: Run flake8
       run: |
         pip install flake8 flake8-bugbear flake8-black

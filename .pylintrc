@@ -1,2 +1,5 @@
 [MESSAGES CONTROL]
-disable=duplicate-code
+disable=duplicate-code,broad-exception-caught
+
+[FORMAT]
+max-line-length=120
