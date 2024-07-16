@@ -68,7 +68,7 @@ def display_menu():
     fullname = get_input("\nYour Full Name")
 
     countries = list(
-        {[d["country"] for d in all_deployments if d["status"] == "active"]}
+        {d["country"] for d in all_deployments if d["status"] == "active"}
     )
     country = get_choice("Countries:", countries)
 
