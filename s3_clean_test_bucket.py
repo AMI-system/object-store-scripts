@@ -32,21 +32,17 @@ def delete_file_from_bucket(obj):
 
 
 BUCKET = s3_client.Bucket("test-upload")
-PREFIX = ""
-
-COUNT = 0
-
-for i in BUCKET.objects.filter(Prefix=PREFIX):
-    COUNT = COUNT + 1
-
-print(f"Total number of files {COUNT}\n")
 
 # Create a ThreadPoolExecutor
+COUNT = 0
+for _ in BUCKET.objects.all():
+    COUNT = COUNT + 1
+
 with tqdm(desc="Deleting files", ncols=60, total=COUNT, unit="B", unit_scale=1) as pbar:
     with ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(delete_file_from_bucket, obj)
-            for obj in BUCKET.objects.filter(Prefix=PREFIX)
+            for obj in BUCKET.objects.all()
         ]
-        for future in as_completed(futures):
+        for _ in as_completed(futures):
             pbar.update(1)
