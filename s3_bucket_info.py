@@ -102,7 +102,7 @@ def number_of_files(s3_bucket_name, prefix):
 def display_menu():
     """Display the main menu and handle user interaction."""
     clear_screen()
-    print("Upload Files")
+    print("Bucket Files Information")
     print("============\n")
 
     username = get_input("API Username")

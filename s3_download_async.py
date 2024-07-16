@@ -19,6 +19,7 @@ import aioboto3
 from boto3.s3.transfer import TransferConfig
 import tqdm.asyncio
 
+
 # Load AWS credentials and S3 bucket name from config file
 with open('./credentials.json', encoding="utf-8") as config_file:
     aws_credentials = json.load(config_file)
@@ -150,7 +151,7 @@ def get_choice(prompt, options):
 def display_menu():
     """Display the main menu and handle user interaction."""
     clear_screen()
-    print("Upload Files")
+    print("Download Files")
     print("============\n")
 
     username = get_input("API Username")
