@@ -22,7 +22,7 @@ jobs:
     - name: Run flake8
       run: |
         pip install flake8 flake8-bugbear flake8-black
-        flake8 --max-line-length=120 object-store-scripts
+        flake8 --max-line-length=120 .
     - name: Analysing the code with pylint
       run: |
         pylint $(git ls-files '*.py')
