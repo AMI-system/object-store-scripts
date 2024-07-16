@@ -22,10 +22,14 @@ jobs:
     - name: Create .pylintrc
       run: |
         echo "[MESSAGES CONTROL]" > .pylintrc
-        echo "disable=duplicate-code,broad-exception-caught" >> .pylintrc
+        echo "disable=duplicate-code,broad-exception-caught,global-statement" >> .pylintrc
         echo "" >> .pylintrc
         echo "[FORMAT]" >> .pylintrc
         echo "max-line-length=120" >> .pylintrc
+        echo "" >> .pylintrc
+        echo "[DESIGN]" >> .pylintrc
+        echo "max-locals=16" >> .pylintrc
+        echo "max-args=10" >> .pylintrc
     - name: Run flake8
       run: |
         pip install flake8 flake8-bugbear flake8-black

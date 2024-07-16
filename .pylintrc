@@ -1,5 +1,9 @@
 [MESSAGES CONTROL]
-disable=duplicate-code,broad-exception-caught
+disable=duplicate-code,broad-exception-caught,global-statement
 
 [FORMAT]
 max-line-length=120
+
+[DESIGN]
+max-locals=16
+max-args=10

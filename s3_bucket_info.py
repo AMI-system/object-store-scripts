@@ -74,8 +74,7 @@ def get_choice(prompt, options):
         choice = input("Choose an option (enter the number): ")
         if choice.isdigit() and 1 <= int(choice) <= len(options):
             return options[int(choice) - 1]
-        else:
-            print("Invalid choice. Please try again.")
+        print("Invalid choice. Please try again.")
 
 
 @yaspin(text="Calculating...")
@@ -118,7 +117,7 @@ def display_menu():
     all_deployments = get_deployments()
 
     countries = list(
-        set([d["country"] for d in all_deployments if d["status"] == "active"])
+        {[d["country"] for d in all_deployments if d["status"] == "active"]}
     )
     country = get_choice("Countries:", countries)
 
