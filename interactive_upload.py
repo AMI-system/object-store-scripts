@@ -68,14 +68,17 @@ def display_menu():
     fullname = get_input("\nYour Full Name")
 
     countries = list({d["country"] for d in all_deployments if d["status"] == "active"})
+    countries.append("Test")
     country = get_choice("Countries:", countries)
 
-    country_deployments = [
-        f"{d['location_name']} - {d['camera_id']}"
-        for d in all_deployments
-        if d["country"] == country and d["status"] == "active"
-    ]
-    deployment = get_choice("\nDeployments:", country_deployments)
+    deployment = ""
+    if country != "Test":
+        country_deployments = [
+            f"{d['location_name']} - {d['camera_id']}"
+            for d in all_deployments
+            if d["country"] == country and d["status"] == "active"
+        ]
+        deployment = get_choice("\nDeployments:", country_deployments)
 
     data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
     data_type = get_choice("\nData type:", data_types)
@@ -107,23 +110,29 @@ def display_menu():
     confirm = get_input("\nUpload files? (yes/no)")
     if confirm.lower() == "yes":
         # print("\nUploading files...")
-        s3_bucket_name = [
-            d["country_code"]
-            for d in all_deployments
-            if d["country"] == country and d["status"] == "active"
-        ][0].lower()
-        location_name, camera_id = deployment.split(" - ")
-        dep_id = [
-            d["deployment_id"]
-            for d in all_deployments
-            if d["country"] == country
-            and d["location_name"] == location_name
-            and d["camera_id"] == camera_id
-            and d["status"] == "active"
-        ][0]
+        if country != "Test":
+            s3_bucket_name = [
+                d["country_code"]
+                for d in all_deployments
+                if d["country"] == country and d["status"] == "active"
+            ][0].lower()
+            location_name, camera_id = deployment.split(" - ")
+            dep_id = [
+                d["deployment_id"]
+                for d in all_deployments
+                if d["country"] == country
+                and d["location_name"] == location_name
+                and d["camera_id"] == camera_id
+                and d["status"] == "active"
+            ][0]
+        else:
+            s3_bucket_name = "test-upload"
+            dep_id = "dep_test"
+
         asyncio.run(
             upload_files_in_batches(fullname, s3_bucket_name, dep_id, data_type, files)
         )
+
         # print("Files uploaded successfully!")
         prompt_next_action()
     else:
