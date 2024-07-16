@@ -164,9 +164,7 @@ def display_menu():
 
     all_deployments = get_deployments(username, password)
 
-    countries = list(
-        {d["country"] for d in all_deployments if d["status"] == "active"}
-    )
+    countries = list({d["country"] for d in all_deployments if d["status"] == "active"})
     country = get_choice("Countries:", countries)
 
     country_deployments = [
