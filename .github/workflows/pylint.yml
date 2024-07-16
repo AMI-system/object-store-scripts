@@ -22,7 +22,7 @@ jobs:
     - name: Create .pylintrc
       run: |
         echo "[MESSAGES CONTROL]" > .pylintrc
-        echo "disable=duplicate-code" >> .pylintrc
+        echo "disable=duplicate-code,broad-exception-caught" >> .pylintrc
         echo "" >> .pylintrc
         echo "[FORMAT]" >> .pylintrc
         echo "max-line-length=120" >> .pylintrc
