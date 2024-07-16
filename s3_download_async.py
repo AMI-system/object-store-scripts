@@ -12,7 +12,6 @@ import os
 import getpass
 import json
 import asyncio
-from pathlib import Path
 import requests
 from requests.auth import HTTPBasicAuth
 import aioboto3
@@ -40,7 +39,8 @@ def get_deployments(username, password):
     """Fetch deployments from the API with authentication."""
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(url, auth=HTTPBasicAuth(username, password))
+        response = requests.get(url, auth=HTTPBasicAuth(username, password),
+                                timeout=600)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as err:
