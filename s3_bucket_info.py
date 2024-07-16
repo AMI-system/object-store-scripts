@@ -18,16 +18,16 @@ from requests.auth import HTTPBasicAuth
 
 
 # Load AWS credentials and S3 bucket name from config file
-with open('credentials.json', encoding="utf-8") as config_file:
+with open("credentials.json", encoding="utf-8") as config_file:
     aws_credentials = json.load(config_file)
 
 # Initialize S3 client
 s3_client = boto3.client(
-    's3',
-    aws_access_key_id=aws_credentials['AWS_ACCESS_KEY_ID'],
-    aws_secret_access_key=aws_credentials['AWS_SECRET_ACCESS_KEY'],
-    endpoint_url=aws_credentials['AWS_URL_ENDPOINT'],
-    region_name=aws_credentials['AWS_REGION']
+    "s3",
+    aws_access_key_id=aws_credentials["AWS_ACCESS_KEY_ID"],
+    aws_secret_access_key=aws_credentials["AWS_SECRET_ACCESS_KEY"],
+    endpoint_url=aws_credentials["AWS_URL_ENDPOINT"],
+    region_name=aws_credentials["AWS_REGION"],
 )
 
 
@@ -40,7 +40,9 @@ def get_deployments():
     """Fetch deployments from the API with authentication."""
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(url, auth=HTTPBasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD), timeout=600)
+        response = requests.get(
+            url, auth=HTTPBasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD), timeout=600
+        )
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as err:
@@ -55,7 +57,7 @@ def get_deployments():
 
 def clear_screen():
     """Clear the terminal screen."""
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 def get_input(prompt):
@@ -82,13 +84,10 @@ def number_of_files(s3_bucket_name, prefix):
     Count number of files for country, deployment and data type.
     """
     # Create a paginator helper for list_objects_v2
-    paginator = s3_client.get_paginator('list_objects_v2')
+    paginator = s3_client.get_paginator("list_objects_v2")
 
     # Define the parameters for the pagination operation
-    operation_parameters = {
-        'Bucket': s3_bucket_name,
-        'Prefix': prefix
-    }
+    operation_parameters = {"Bucket": s3_bucket_name, "Prefix": prefix}
 
     # Create an iterator for the paginated response
     page_iterator = paginator.paginate(**operation_parameters)
@@ -99,7 +98,7 @@ def number_of_files(s3_bucket_name, prefix):
     # Iterate through each page in the paginated response
     for page in page_iterator:
         # Add the number of keys in the current page to the total count
-        count += page['KeyCount']
+        count += page["KeyCount"]
 
     return count
 
@@ -118,11 +117,14 @@ def display_menu():
 
     all_deployments = get_deployments()
 
-    countries = list(set([d["country"] for d in all_deployments if d["status"] == "active"]))
+    countries = list(
+        set([d["country"] for d in all_deployments if d["status"] == "active"])
+    )
     country = get_choice("Countries:", countries)
 
     country_deployments = [
-        f"{d['location_name']} - {d['camera_id']}" for d in all_deployments
+        f"{d['location_name']} - {d['camera_id']}"
+        for d in all_deployments
         if d["country"] == country and d["status"] == "active"
     ]
     deployment = get_choice("\nDeployments:", country_deployments)
@@ -130,9 +132,20 @@ def display_menu():
     data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
     data_type = get_choice("\nData type:", data_types)
 
-    s3_bucket_name = [d["country_code"] for d in all_deployments if d["country"] == country and d["status"] == "active"][0].lower()
+    s3_bucket_name = [
+        d["country_code"]
+        for d in all_deployments
+        if d["country"] == country and d["status"] == "active"
+    ][0].lower()
     location_name, camera_id = deployment.split(" - ")
-    dep_id = [d["deployment_id"] for d in all_deployments if d["country"] == country and d["location_name"] == location_name and d["camera_id"] == camera_id and d["status"] == "active"][0]
+    dep_id = [
+        d["deployment_id"]
+        for d in all_deployments
+        if d["country"] == country
+        and d["location_name"] == location_name
+        and d["camera_id"] == camera_id
+        and d["status"] == "active"
+    ][0]
 
     prefix = f"{dep_id}/{data_type}"
 
@@ -149,7 +162,9 @@ def display_menu():
 def prompt_next_action():
     """Prompt the user for the next action: check more deployments or leave."""
     while True:
-        next_action = get_choice("\nWhat do you want to do next?", ["Check another deployment", "Leave"])
+        next_action = get_choice(
+            "\nWhat do you want to do next?", ["Check another deployment", "Leave"]
+        )
         if next_action == "Check another deployment":
             display_menu()
         elif next_action == "Leave":
@@ -159,5 +174,5 @@ def prompt_next_action():
             print("Invalid choice. Please try again.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     display_menu()

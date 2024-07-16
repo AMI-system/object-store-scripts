@@ -20,7 +20,7 @@ import tqdm.asyncio
 
 
 # Load AWS credentials and S3 bucket name from config file
-with open('./credentials.json', encoding="utf-8") as config_file:
+with open("./credentials.json", encoding="utf-8") as config_file:
     aws_credentials = json.load(config_file)
 
 # Initialize aioboto3 session
@@ -39,8 +39,9 @@ def get_deployments(username, password):
     """Fetch deployments from the API with authentication."""
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(url, auth=HTTPBasicAuth(username, password),
-                                timeout=600)
+        response = requests.get(
+            url, auth=HTTPBasicAuth(username, password), timeout=600
+        )
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as err:
@@ -58,7 +59,9 @@ async def download_object(s3_client, bucket_name, key, download_path):
     Download a single object from S3 asynchronously.
     """
     try:
-        await s3_client.download_file(bucket_name, key, download_path, Config=transfer_config)
+        await s3_client.download_file(
+            bucket_name, key, download_path, Config=transfer_config
+        )
     except Exception as e:
         print(f"Error downloading {bucket_name}/{key}: {e}")
 
@@ -80,13 +83,13 @@ async def count_files(s3_client, bucket_name, prefix):
     """
     Count number of files for a given prefix.
     """
-    paginator = s3_client.get_paginator('list_objects_v2')
-    operation_parameters = {'Bucket': bucket_name, 'Prefix': prefix}
+    paginator = s3_client.get_paginator("list_objects_v2")
+    operation_parameters = {"Bucket": bucket_name, "Prefix": prefix}
     page_iterator = paginator.paginate(**operation_parameters)
 
     count = 0
     async for page in page_iterator:
-        count += page.get('KeyCount', 0)
+        count += page.get("KeyCount", 0)
 
     return count
 
@@ -96,24 +99,27 @@ async def get_objects(bucket_name, key, local_path, batch_size=100):
     Fetch objects from the S3 bucket and download them asynchronously in batches.
     """
     async with session.client(
-            's3',
-            aws_access_key_id=aws_credentials['AWS_ACCESS_KEY_ID'],
-            aws_secret_access_key=aws_credentials['AWS_SECRET_ACCESS_KEY'],
-            region_name=aws_credentials['AWS_REGION'],
-            endpoint_url=aws_credentials['AWS_URL_ENDPOINT']) as s3_client:
+        "s3",
+        aws_access_key_id=aws_credentials["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=aws_credentials["AWS_SECRET_ACCESS_KEY"],
+        region_name=aws_credentials["AWS_REGION"],
+        endpoint_url=aws_credentials["AWS_URL_ENDPOINT"],
+    ) as s3_client:
 
         total_files = await count_files(s3_client, bucket_name, key)
 
-        paginator = s3_client.get_paginator('list_objects_v2')
-        operation_parameters = {'Bucket': bucket_name, 'Prefix': key}
+        paginator = s3_client.get_paginator("list_objects_v2")
+        operation_parameters = {"Bucket": bucket_name, "Prefix": key}
         page_iterator = paginator.paginate(**operation_parameters)
 
-        progress_bar = tqdm.asyncio.tqdm(total=total_files, desc='Download files from server asynchronously.')
+        progress_bar = tqdm.asyncio.tqdm(
+            total=total_files, desc="Download files from server asynchronously."
+        )
 
         keys = []
         async for page in page_iterator:
-            for obj in page.get('Contents', []):
-                keys.append(obj['Key'])
+            for obj in page.get("Contents", []):
+                keys.append(obj["Key"])
                 if len(keys) >= batch_size:
                     await download_batch(s3_client, bucket_name, keys, local_path)
                     keys = []
@@ -127,7 +133,7 @@ async def get_objects(bucket_name, key, local_path, batch_size=100):
 
 def clear_screen():
     """Clear the terminal screen."""
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 def get_input(prompt):
@@ -159,18 +165,35 @@ def display_menu():
 
     all_deployments = get_deployments(username, password)
 
-    countries = list(set([d["country"] for d in all_deployments if d["status"] == "active"]))
+    countries = list(
+        set([d["country"] for d in all_deployments if d["status"] == "active"])
+    )
     country = get_choice("Countries:", countries)
 
-    country_deployments = [f"{d['location_name']} - {d['camera_id']}" for d in all_deployments if d["country"] == country and d["status"] == "active"]
+    country_deployments = [
+        f"{d['location_name']} - {d['camera_id']}"
+        for d in all_deployments
+        if d["country"] == country and d["status"] == "active"
+    ]
     deployment = get_choice("\nDeployments:", country_deployments)
 
     data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
     data_type = get_choice("\nData type:", data_types)
 
-    s3_bucket_name = [d["country_code"] for d in all_deployments if d["country"] == country and d["status"] == "active"][0].lower()
+    s3_bucket_name = [
+        d["country_code"]
+        for d in all_deployments
+        if d["country"] == country and d["status"] == "active"
+    ][0].lower()
     location_name, camera_id = deployment.split(" - ")
-    dep_id = [d["deployment_id"] for d in all_deployments if d["country"] == country and d["location_name"] == location_name and d["camera_id"] == camera_id and d["status"] == "active"][0]
+    dep_id = [
+        d["deployment_id"]
+        for d in all_deployments
+        if d["country"] == country
+        and d["location_name"] == location_name
+        and d["camera_id"] == camera_id
+        and d["status"] == "active"
+    ][0]
 
     prefix = f"{dep_id}/{data_type}"
 

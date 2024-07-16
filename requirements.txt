@@ -8,3 +8,4 @@ requests
 tenacity
 tqdm
 yaspin
+flake8-black
