@@ -23,9 +23,10 @@ import tqdm.asyncio
 # Apply nested asyncio to allow event loops to run inside Jupyter notebooks or other nested environments.
 nest_asyncio.apply()
 
+
 # Global variables to store credentials
-global_username = None
-global_password = None
+GLOBAL_USERNAME = None
+GLOBAL_PASSWORD = None
 
 
 def clear_screen():
@@ -57,13 +58,13 @@ def display_menu():
     print("Upload Files")
     print("============\n")
 
-    global global_username, global_password
+    global GLOBAL_USERNAME, GLOBAL_PASSWORD
 
-    if global_username is None or global_password is None:
-        global_username = get_input("API Username")
-        global_password = getpass.getpass("API Password: ")
+    if GLOBAL_USERNAME is None or GLOBAL_PASSWORD is None:
+        GLOBAL_USERNAME = get_input("API Username")
+        GLOBAL_PASSWORD = getpass.getpass("API Password: ")
 
-    all_deployments = get_deployments(global_username, global_password)
+    all_deployments = get_deployments(GLOBAL_USERNAME, GLOBAL_PASSWORD)
 
     fullname = get_input("\nYour Full Name")
 
@@ -93,7 +94,7 @@ def display_menu():
 
     print("\nReview Your Input")
     print("=================\n")
-    print(f"Username: {global_username}")
+    print(f"Username: {GLOBAL_USERNAME}")
     print(f"Full Name: {fullname}")
     print(f"Country: {country}")
     print(f"Deployment: {deployment}")
@@ -106,14 +107,14 @@ def display_menu():
         s3_bucket_name = [d["country_code"] for d in all_deployments if d["country"] == country and d["status"] == "active"][0].lower()
         location_name, camera_id = deployment.split(" - ")
         dep_id = [d["deployment_id"] for d in all_deployments if d["country"] == country and d["location_name"] == location_name and d["camera_id"] == camera_id and d["status"] == "active"][0]
-        asyncio.run(upload_files_in_batches(global_username, global_password, fullname, s3_bucket_name, dep_id, data_type, files))
+        asyncio.run(upload_files_in_batches(GLOBAL_USERNAME, GLOBAL_PASSWORD, fullname, s3_bucket_name, dep_id, data_type, files))
         # print("Files uploaded successfully!")
-        prompt_next_action(fullname, all_deployments)
+        prompt_next_action()
     else:
         print("\nUpload canceled.")
 
 
-def prompt_next_action(fullname, all_deployments):
+def prompt_next_action():
     """Prompt the user for the next action: upload more files or leave."""
     while True:
         next_action = get_choice("\nWhat do you want to do next?", ["Upload more files", "Leave"])
@@ -137,7 +138,8 @@ def get_deployments(username, password):
     """Fetch deployments from the API with authentication."""
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(url, auth=HTTPBasicAuth(username, password))
+        response = requests.get(url, auth=HTTPBasicAuth(username, password),
+                                timeout=600)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as err:
