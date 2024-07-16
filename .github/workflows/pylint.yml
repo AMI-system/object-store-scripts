@@ -19,22 +19,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         pip install -r requirements.txt
+    - name: Check out source repository
+      uses: actions/checkout@v3
+    - name: Set up Python environment
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.9"
+    - name: flake8 Lint
+      uses: py-actions/flake8@v2
+      with:
+          max-line-length: "120"
+          path: "object-store-scripts"
+          plugins: "flake8-bugbear==22.1.11 flake8-black"
     - name: Analysing the code with pylint
       run: |
         pylint $(git ls-files '*.py')
-  flake8-lint:
-    runs-on: ubuntu-latest
-    name: Lint
-    steps:
-      - name: Check out source repository
-        uses: actions/checkout@v3
-      - name: Set up Python environment
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-      - name: flake8 Lint
-        uses: py-actions/flake8@v2
-        with:
-            max-line-length: "120"
-            path: "cyto_ml"
-            plugins: "flake8-bugbear==22.1.11 flake8-black"
