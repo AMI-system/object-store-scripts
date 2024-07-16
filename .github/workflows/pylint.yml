@@ -9,9 +9,9 @@ jobs:
       matrix:
         python-version: ["3.9"]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -23,6 +23,6 @@ jobs:
       run: |
         pip install flake8 flake8-bugbear flake8-black
         flake8 --max-line-length=120 .
-    - name: Analysing the code with pylint
+    - name: Analyzing the code with pylint
       run: |
         pylint $(git ls-files '*.py')
