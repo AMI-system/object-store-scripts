@@ -18,7 +18,7 @@ from requests.auth import HTTPBasicAuth
 
 
 # Load AWS credentials and S3 bucket name from config file
-with open('credentials.json') as config_file:
+with open('credentials.json', encoding="utf-8") as config_file:
     aws_credentials = json.load(config_file)
 
 # Initialize S3 client
@@ -35,7 +35,7 @@ def get_deployments(username, password):
     """Fetch deployments from the API with authentication."""
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(url, auth=HTTPBasicAuth(username, password))
+        response = requests.get(url, auth=HTTPBasicAuth(username, password), timeout=600)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as err:
