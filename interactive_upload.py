@@ -64,7 +64,7 @@ def display_menu():
         GLOBAL_USERNAME = get_input("API Username")
         GLOBAL_PASSWORD = getpass.getpass("API Password: ")
 
-    all_deployments = get_deployments(GLOBAL_USERNAME, GLOBAL_PASSWORD)
+    all_deployments = get_deployments()
 
     fullname = get_input("\nYour Full Name")
 
@@ -94,7 +94,6 @@ def display_menu():
 
     print("\nReview Your Input")
     print("=================\n")
-    print(f"Username: {GLOBAL_USERNAME}")
     print(f"Full Name: {fullname}")
     print(f"Country: {country}")
     print(f"Deployment: {deployment}")
@@ -107,7 +106,7 @@ def display_menu():
         s3_bucket_name = [d["country_code"] for d in all_deployments if d["country"] == country and d["status"] == "active"][0].lower()
         location_name, camera_id = deployment.split(" - ")
         dep_id = [d["deployment_id"] for d in all_deployments if d["country"] == country and d["location_name"] == location_name and d["camera_id"] == camera_id and d["status"] == "active"][0]
-        asyncio.run(upload_files_in_batches(GLOBAL_USERNAME, GLOBAL_PASSWORD, fullname, s3_bucket_name, dep_id, data_type, files))
+        asyncio.run(upload_files_in_batches(fullname, s3_bucket_name, dep_id, data_type, files))
         # print("Files uploaded successfully!")
         prompt_next_action()
     else:
@@ -134,11 +133,11 @@ def get_file_info(file_path):
     return filename, file_type
 
 
-def get_deployments(username, password):
+def get_deployments():
     """Fetch deployments from the API with authentication."""
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(url, auth=HTTPBasicAuth(username, password),
+        response = requests.get(url, auth=HTTPBasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD),
                                 timeout=600)
         response.raise_for_status()
         return response.json()
@@ -152,15 +151,13 @@ def get_deployments(username, password):
         sys.exit(1)
 
 
-async def upload_files_in_batches(username, password, name, bucket, dep_id,
-                                  data_type, files, batch_size=100):
+async def upload_files_in_batches(name, bucket, dep_id, data_type, files, batch_size=100):
     """Upload files in batches."""
     async with aiohttp.ClientSession(timeout=ClientTimeout(total=1200)) as session:
         while True:
             print()
             progress_exist = tqdm.asyncio.tqdm(total=len(files), desc='Checking if files already in server')
-            files_to_upload = await check_files(session, username,
-                                                password, name,
+            files_to_upload = await check_files(session, name,
                                                 bucket, dep_id, data_type,
                                                 files, progress_exist)
             progress_exist.close()
@@ -174,14 +171,12 @@ async def upload_files_in_batches(username, password, name, bucket, dep_id,
             progress_bar = tqdm.asyncio.tqdm(total=len(files_to_upload), desc='Uploading files')
 
             if len(files_to_upload) <= batch_size:
-                await upload_files(session, username, password, name, bucket,
-                                   dep_id, data_type, files_to_upload)
+                await upload_files(session, name, bucket, dep_id, data_type, files_to_upload)
                 progress_bar.update(len(files_to_upload))
             else:
                 for i in range(0, len(files_to_upload), batch_size):
                     batch = files_to_upload[i:i + batch_size]
-                    await upload_files(session, username, password, name,
-                                       bucket, dep_id, data_type, batch)
+                    await upload_files(session, name, bucket, dep_id, data_type, batch)
                     progress_bar.update(len(batch))
 
             progress_bar.close()
@@ -190,22 +185,19 @@ async def upload_files_in_batches(username, password, name, bucket, dep_id,
             files = files_to_upload
 
 
-async def check_files(session, username, password, name, bucket,
-                      dep_id, data_type, files, progress_exist):
+async def check_files(session, name, bucket, dep_id, data_type, files, progress_exist):
     """Check if files exists in the object store already."""
     files_to_upload = []
 
     for file_path in files:
-        if not await check_file_exist(session, username, password, name,
-                                      bucket, dep_id, data_type, file_path):
+        if not await check_file_exist(session, name, bucket, dep_id, data_type, file_path):
             files_to_upload.append(file_path)
         progress_exist.update(1)
 
     return files_to_upload
 
 
-async def check_file_exist(session, username, password, name, bucket,
-                           dep_id, data_type, file_path):
+async def check_file_exist(session, name, bucket, dep_id, data_type, file_path):
     """Check if files exists in the object store already."""
     url = "https://connect-apps.ceh.ac.uk/ami-data-upload/check-file-exist/"
     file_name, _ = get_file_info(file_path)
@@ -216,22 +208,20 @@ async def check_file_exist(session, username, password, name, bucket,
     data.add_field("data_type", data_type)
     data.add_field("filename", file_name)
 
-    async with session.post(url, auth=BasicAuth(username, password),
+    async with session.post(url, auth=BasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD),
                             data=data) as response:
         response.raise_for_status()
         exist = await response.json()
         return exist["exists"]
 
 
-async def upload_files(session, username, password, name, bucket, dep_id,
-                       data_type, files):
+async def upload_files(session, name, bucket, dep_id, data_type, files):
     """Upload individual files."""
     tasks = []
     for file_path in files:
         file_name, file_type = get_file_info(file_path)
         try:
-            presigned_url = await get_presigned_url(session, username,
-                                                    password, name, bucket,
+            presigned_url = await get_presigned_url(session, name, bucket,
                                                     dep_id, data_type,
                                                     file_name, file_type)
             task = upload_file_to_s3(session, presigned_url,
@@ -244,8 +234,7 @@ async def upload_files(session, username, password, name, bucket, dep_id,
 
 
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
-async def get_presigned_url(session, username, password, name, bucket,
-                            dep_id, data_type, file_name, file_type):
+async def get_presigned_url(session, name, bucket, dep_id, data_type, file_name, file_type):
     """Get a presigned URL for file upload."""
     url = "https://connect-apps.ceh.ac.uk/ami-data-upload/generate-presigned-url/"
 
@@ -257,7 +246,7 @@ async def get_presigned_url(session, username, password, name, bucket,
     data.add_field("filename", file_name)
     data.add_field("file_type", file_type)
 
-    async with session.post(url, auth=BasicAuth(username, password),
+    async with session.post(url, auth=BasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD),
                             data=data) as response:
         response.raise_for_status()
         return await response.json()
