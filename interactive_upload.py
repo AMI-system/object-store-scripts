@@ -10,7 +10,6 @@ import sys
 import os
 import mimetypes
 import pathlib
-import getpass
 import asyncio
 import nest_asyncio
 import requests
@@ -61,7 +60,7 @@ def display_menu():
 
     if GLOBAL_USERNAME is None or GLOBAL_PASSWORD is None:
         GLOBAL_USERNAME = get_input("API Username")
-        GLOBAL_PASSWORD = getpass.getpass("API Password: ")
+        GLOBAL_PASSWORD = get_input("API Password")
 
     all_deployments = get_deployments()
 
