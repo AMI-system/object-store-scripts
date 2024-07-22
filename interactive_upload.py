@@ -90,11 +90,6 @@ def display_menu():
             break
         print("Invalid directory. Please try again.")
 
-    files = [
-        os.path.join(directory_path, f)
-        for f in os.listdir(directory_path)
-        if os.path.isfile(os.path.join(directory_path, f))
-    ]
     directory_path = pathlib.Path(directory_path)
     files = list(directory_path.rglob(f"*{extension}"))
 
