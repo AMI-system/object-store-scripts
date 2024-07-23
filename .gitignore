@@ -2,3 +2,12 @@
 .mypy_cache
 __pycache__
 *.log
+
+credentials.json
+outputs/
+data/
+annotated_examples/
+.ipynb_checkpoints/
+
+*.out
+*.stats
