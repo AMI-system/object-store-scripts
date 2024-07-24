@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw
 import pandas as pd
 import timm
 import datetime
+import argparse
 
 device = torch.device('cpu')
 
@@ -60,12 +61,12 @@ transform = transforms.Compose([
 ])
 
 transform_species = transforms.Compose(
-            [
-                transforms.Resize((300, 300)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.5,0.5, 0.5], std=[0.5,0.5, 0.5]),
-            ]
-        )
+    [
+        transforms.Resize((300, 300)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+    ]
+)
 
 class Resnet50(torch.nn.Module):
     def __init__(self, num_classes):
@@ -89,7 +90,7 @@ class Resnet50(torch.nn.Module):
         x = self.classifier(x)
 
         return x
-    
+
 def classify_species(image_tensor):
     with torch.no_grad():
         species_output = regional_model(image_tensor)
@@ -119,18 +120,18 @@ def load_models():
     weights_path = "/bask/homes/f/fspo1218/amber/data/mila_models/moth-nonmoth-effv2b3_20220506_061527_30.pth"
     labels_path = "/bask/homes/f/fspo1218/amber/data/mila_models/05-moth-nonmoth_category_map.json"
 
-    num_classes=2
+    num_classes = 2
     classification_model = timm.create_model(
-                "tf_efficientnetv2_b3",
-                num_classes=num_classes,
-                weights=None,
-            )
+        "tf_efficientnetv2_b3",
+        num_classes=num_classes,
+        weights=None,
+    )
     classification_model = classification_model.to(device)
     checkpoint = torch.load(weights_path, map_location=device)
     state_dict = checkpoint.get("model_state_dict") or checkpoint
     classification_model.load_state_dict(state_dict)
     classification_model.eval()
-    
+
     weights = '/bask/homes/f/fspo1218/amber/projects/species_classifier/outputs/turing-costarica_v03_resnet50_2024-06-04-16-17_state.pt'
     category_map = json.load(open('/bask/homes/f/fspo1218/amber/data/gbif_costarica/03_costarica_data_category_map.json'))
 
@@ -146,16 +147,13 @@ def load_models():
 
     return model_loc, classification_model, species_model, category_map
 
-
-
-
 def perform_inf(image_path, loc_model, binary_model, regional_model, country, region):
-    """Perform inference on an image."""   
+    """Perform inference on an image."""
     image = Image.open(image_path).convert('RGB')
     original_image = image.copy()
     original_width, original_height = image.size
     input_tensor = transform(image).unsqueeze(0).to(device)
-    
+
     all_boxes = pd.DataFrame(columns=['image_path', 'timestamp', 'country', 'deployment', 'class', 'class_confidence', 'x_min', 'y_min', 'x_max', 'y_max', 'species_name', 'species_confidence'])
 
     # Perform object localization
@@ -175,7 +173,7 @@ def perform_inf(image_path, loc_model, binary_model, regional_model, country, re
             box_width = x_max - x_min
             box_height = y_max - y_min
 
-            # if box heigh or width > half the image, skip
+            # if box height or width > half the image, skip
             if box_width > original_width / 2 or box_height > original_height / 2:
                 continue
 
@@ -192,250 +190,68 @@ def perform_inf(image_path, loc_model, binary_model, regional_model, country, re
             class_name = 'non-moth' if predicted_class.item() == 1 else 'moth'
 
             # Annotate image with bounding box and class
-            if class_name == 'moth':                
+            if class_name == 'moth':
                 # Perform the species classification
                 species_name, species_confidence = classify_species(cropped_tensor)
-                
+
                 draw = ImageDraw.Draw(original_image)
                 draw.rectangle([x_min, y_min, x_max, y_max], outline='green', width=3)
                 draw.text((x_min, y_min - 10), species_name + " , %.3f " % species_confidence, fill='green')
-                
-            else: 
+
+            else:
                 species_name, species_confidence = None, None
-                
+
             # append to csv with pandas
             df = pd.DataFrame([[image_path, datetime.datetime.now(), country, region, class_name, confidence, x_min, y_min, x_max, y_max, species_name, species_confidence]],
                               columns=['image_path', 'timestamp', 'country', 'deployment', 'class', 'class_confidence', 'x_min', 'y_min', 'x_max', 'y_max', 'species_name', 'species_confidence'])
-            all_boxes = pd.concat([all_boxes, df])
-            df.to_csv(os.path.join(os.path.dirname(image_path), 'results.csv'), mode='a', header=False, index=False)
+            all_boxes = pd.concat([all_boxes, df], ignore_index=True)
 
-        example_dir = os.path.dirname(image_path.replace('data2', 'annotated_examples'))
-        os.makedirs(example_dir, exist_ok=True)
+    return original_image, all_boxes
 
-        example_images = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(example_dir)) for f in fn]
-        example_images = [x for x in example_images if x.endswith('jpg')]
-       
-        
-        if (all_boxes['class'] == 'moth').any() and len(example_images) < 10:
-            print('Saving annotation to', image_path.replace('data2', 'annotated_examples'))
-            original_image.save(image_path.replace('data2', 'annotated_examples'))
+def upload_file(s3_bucket, local_file_path, s3_object_name=None):
+    if s3_object_name is None:
+        s3_object_name = os.path.basename(local_file_path)
 
+    s3_client = session.client('s3')
+    s3_client.upload_file(local_file_path, s3_bucket, s3_object_name, Config=transfer_config)
 
-def get_deployments(username, password):
-    """Fetch deployments from the API with authentication."""
-    try:
-        url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(
-            url, auth=HTTPBasicAuth(username, password), timeout=600
-        )
+def save_image_with_boxes(image_with_boxes, output_image_path):
+    image_with_boxes.save(output_image_path)
 
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as err:
-        print(f"HTTP Error: {err}")
-        if response.status_code == 401:
-            print("Wrong username or password. Try again!")
-        sys.exit(1)
-    except Exception as err:
-        print(f"Error: {err}")
-        sys.exit(1)
+def main(country, region, local_directory_path):
+    s3_bucket = aws_credentials["S3_BUCKET_NAME"]
 
+    # Load the models
+    model_loc, classification_model, regional_model, category_map = load_models()
 
-def download_object(s3_client, bucket_name, key, download_path, perform_inference=False,
-                    remove_image=False, localisation_model=None, binary_model=None, species_model=None, country='UK', region='UKCEH'):
-    """
-    Download a single object from S3 synchronously.
-    """
-    try:
-        s3_client.download_file(
-            bucket_name, key, download_path, Config=transfer_config
-        )
-        if perform_inference:
-            perform_inf(download_path, loc_model = localisation_model, binary_model=binary_model, regional_model=species_model, country=country, region=region)
-        if remove_image:
-            os.remove(download_path)
-    except Exception as e:
-        print(f"Error downloading {bucket_name}/{key}: {e}")
+    # List all the image files in the local directory
+    image_files = [f for f in os.listdir(local_directory_path) if os.path.isfile(os.path.join(local_directory_path, f))]
 
+    for image_file in tqdm.tqdm(image_files, desc="Processing images"):
+        image_path = os.path.join(local_directory_path, image_file)
 
-def download_batch(s3_client, bucket_name, keys, local_path, perform_inference=False,
-                   remove_image=False, localisation_model=None, binary_model=None, species_model=None, country='UK', region='UKCEH'):
-    """
-    Download a batch of objects from S3.
-    """
-    for key in keys:
-        file_path, filename = os.path.split(key)
-        os.makedirs(os.path.join(local_path, file_path), exist_ok=True)
-        download_path = os.path.join(local_path, file_path, filename)
-        download_object(s3_client, bucket_name, key, download_path,
-                        perform_inference, remove_image, localisation_model, binary_model, species_model, country, region)
+        # Perform inference on the image
+        image_with_boxes, df = perform_inf(image_path, model_loc, classification_model, regional_model, country, region)
 
+        # Save the output image with bounding boxes locally
+        output_image_path = os.path.join(local_directory_path, f"boxed_{image_file}")
+        save_image_with_boxes(image_with_boxes, output_image_path)
 
-def count_files(s3_client, bucket_name, prefix):
-    """
-    Count number of files for a given prefix.
-    """
-    paginator = s3_client.get_paginator("list_objects_v2")
-    operation_parameters = {"Bucket": bucket_name, "Prefix": prefix}
-    page_iterator = paginator.paginate(**operation_parameters)
+        # Save the dataframe as a CSV file
+        csv_file_path = os.path.join(local_directory_path, "mila_outputs.csv")
+        if os.path.exists(csv_file_path):
+            df.to_csv(csv_file_path, mode='a', header=False, index=False)
+        else:
+            df.to_csv(csv_file_path, mode='w', header=True, index=False)
 
-    count = 0
-    for page in page_iterator:
-        count += page.get("KeyCount", 0)
-
-    return count
-
-
-def get_objects(bucket_name, key,
-                local_path,
-                batch_size=100,
-                perform_inference=False,
-                remove_image=False,
-                localisation_model=None,
-                binary_model=None,
-                species_model=None, 
-               country='UK', region='UKCEH'):
-    """
-    Fetch objects from the S3 bucket and download them synchronously in batches.
-    """
-    s3_client = session.client("s3", endpoint_url=aws_credentials["AWS_URL_ENDPOINT"])
-
-    total_files = count_files(s3_client, bucket_name, key)
-
-    paginator = s3_client.get_paginator("list_objects_v2")
-    operation_parameters = {"Bucket": bucket_name, "Prefix": key}
-    page_iterator = paginator.paginate(**operation_parameters)
-
-    progress_bar = tqdm.tqdm(total=total_files, desc="Download files from server synchronously")
-
-    keys = []
-    for page in page_iterator:
-        for obj in page.get("Contents", []):
-            keys.append(obj["Key"])
-
-            if len(keys) >= batch_size:
-                download_batch(s3_client, bucket_name, keys, local_path, perform_inference,
-                               remove_image, localisation_model, binary_model, species_model, country, region)
-                keys = []
-                progress_bar.update(batch_size)
-        if keys:
-            download_batch(s3_client, bucket_name, keys, local_path, perform_inference,
-                           remove_image, localisation_model, binary_model, species_model, country, region)
-            progress_bar.update(len(keys))
-
-    progress_bar.close()
-
-
-def clear_screen():
-    """Clear the terminal screen."""
-    os.system("cls" if os.name == "nt" else "clear")
-
-
-def get_input(prompt):
-    """Get user input."""
-    return input(prompt + ": ")
-
-
-def get_choice(prompt, options):
-    """Get user's choice from a list of options."""
-    print(prompt)
-    for i, option in enumerate(options, start=1):
-        print(f"{i}. {option}")
-    while True:
-        choice = input("Choose an option (enter the number): ")
-        if choice.isdigit() and 1 <= int(choice) <= len(options):
-            return options[int(choice) - 1]
-        print("Invalid choice. Please try again.")
-
-
-def display_menu():
-    """Display the main menu and handle user interaction."""
-    # clear_screen()
-    print("Download Files")
-    print("============\n")
-
-    username = aws_credentials['UKCEH_username'] #get_input("API Username")
-    password = aws_credentials['UKCEH_password'] #getpass.getpass("API Password: ")
-
-    all_deployments = get_deployments(username, password)
-
-    countries = list({d["country"] for d in all_deployments if d["status"] == "active"})
-    #country = get_choice("Countries:", countries)
-    country = 'Costa Rica'
-    print('Analysing: ', country)
-
-
-    country_deployments = [
-        f"{d['location_name']} - {d['camera_id']}"
-        for d in all_deployments
-        if d["country"] == country and d["status"] == "active"
-    ]
-    country_deployments = country_deployments
-
-    #deployment = get_choice("\nDeployments:", country_deployments + ['All of the above'])
-    deployment = 'All of the above'
-    print('Deployments: ',  deployment)
-
-
-    data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
-    #data_type = get_choice("\nData type:", data_types)
-    data_type = "snapshot_images"
-
-    s3_bucket_name = [
-        d["country_code"]
-        for d in all_deployments
-        if d["country"] == country and d["status"] == "active"
-    ][0].lower()
-
-    print("\nSelect Directory:")
-    # while True:
-    #     local_directory_path = get_input("Enter directory path")
-    #     if os.path.isdir(local_directory_path):
-    #         break
-    #     print("Invalid directory. Please try again.")
-    local_directory_path = '/bask/homes/f/fspo1218/amber/projects/object-store-scripts/data2'
-    print('Using ', local_directory_path, ' as scratch storage')
-
-    #perform_inference = get_input("Perform inference on images? (y/n)").lower() == "y"
-    #remove_image = get_input("Remove images after inference? (y/n)").lower() == "y"
-    perform_inference = True
-    remove_image = True
-
-    print('Removing images', remove_image)
-    print('Performing inference', perform_inference)
-
-    # regional_model = models[country]
-    # print(f"Loading model for {country}: {regional_model}")
-
-    #---------
-    if deployment == 'All of the above':
-        deps = country_deployments
-    else :
-        deps = [deployment]
-    for region in deps:
-        print(region)
-        location_name, camera_id = region.split(" - ")
-        dep_id = [
-            d["deployment_id"]
-            for d in all_deployments
-            if d["country"] == country
-            and d["location_name"] == location_name
-            and d["camera_id"] == camera_id
-            and d["status"] == "active"
-        ][0]
-
-        prefix = f"{dep_id}/{data_type}"
-        print(prefix)
-        get_objects(s3_bucket_name, prefix, local_directory_path,
-                    batch_size=100,
-                    perform_inference=perform_inference,
-                    remove_image=remove_image,
-                    localisation_model=model_loc,
-                    binary_model=classification_model,
-                    species_model=regional_model, 
-                   country=country, region=region)
+        # Upload the CSV file to S3
+        upload_file(s3_bucket, csv_file_path, s3_object_name="mila_outputs.csv")
 
 if __name__ == "__main__":
-    print('Loading models...')
-    model_loc, classification_model, regional_model, category_map = load_models()
-    display_menu()
+    parser = argparse.ArgumentParser(description="Process images and upload results to S3.")
+    parser.add_argument("country", type=str, help="Country of the deployment.")
+    parser.add_argument("region", type=str, help="Region of the deployment.")
+    parser.add_argument("local_directory_path", type=str, help="Local directory path containing images.")
+    args = parser.parse_args()
+
+    main(args.country, args.region, args.local_directory_path)
