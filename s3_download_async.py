@@ -9,7 +9,6 @@ AWS credentials and S3 bucket name are loaded from a configuration file
 
 import sys
 import os
-import getpass
 import json
 import asyncio
 import requests
@@ -160,7 +159,7 @@ def display_menu():
     print("============\n")
 
     username = get_input("API Username")
-    password = getpass.getpass("API Password: ")
+    password = get_input("API Password")
 
     all_deployments = get_deployments(username, password)
 

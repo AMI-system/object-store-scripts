@@ -9,7 +9,6 @@ loaded from a configuration file (credentials.json).
 
 import sys
 import os
-import getpass
 import json
 from yaspin import yaspin
 import boto3
@@ -112,7 +111,7 @@ def display_menu():
 
     if GLOBAL_USERNAME is None or GLOBAL_PASSWORD is None:
         GLOBAL_USERNAME = get_input("API Username")
-        GLOBAL_PASSWORD = getpass.getpass("API Password: ")
+        GLOBAL_PASSWORD = get_input("API Password")
 
     all_deployments = get_deployments()
 
