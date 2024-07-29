@@ -20,7 +20,7 @@ conda activate "${CONDA_ENV_PATH}"
 
 
 # Run the Python script on baskerville
-python s3_download_with_inference.py
+python s3_download_with_inference.py "Costa Rica" "All of the above"
 
 
 
