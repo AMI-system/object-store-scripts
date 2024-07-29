@@ -11,3 +11,4 @@ annotated_examples/
 
 *.out
 *.stats
+**/*.csv
