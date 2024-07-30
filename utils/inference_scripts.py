@@ -14,7 +14,7 @@ from utils.custom_models import Resnet50_species, ResNet50_order, load_models
 
 
 def classify_species(image_tensor, regional_model, regional_category_map):
-    print('Inferednce for species...')
+    # print('Inference for species...')
     output = regional_model(image_tensor)
     predictions = torch.nn.functional.softmax(output, dim=1)
     predictions = predictions.detach().numpy()
@@ -29,31 +29,30 @@ def classify_species(image_tensor, regional_model, regional_category_map):
     return label, score
 
 def classify_order(image_tensor, order_model, order_labels, order_data_thresholds):
-    print('Inference for order...')
+    # print('Inference for order...')
     augment=False
     visualize=False
     #visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
     pred = order_model(image_tensor)
 
-
-
+    pred = torch.nn.functional.softmax(pred, dim=1) #.cpu().numpy()[0]) * 100
+    
+    
     predictions = pred.cpu().detach().numpy()
     predicted_label = np.argmax(predictions, axis=1)[0]
-
-    print('check 1')
-
+    score = predictions.max(axis=1).astype(float)[0]
+    
     label = order_labels[predicted_label]
-    print('check 2')
-    confidence_value = norm.cdf(predictions[0][predicted_label],
-                                order_data_thresholds['Mean'][predicted_label],
-                                order_data_thresholds['Std'][predicted_label])
-    confidence_value = round(confidence_value*10000)/100
-    print('check 3')
+    # confidence_value = norm.cdf(predictions[0][predicted_label],
+    #                             order_data_thresholds['Mean'][predicted_label],
+    #                             order_data_thresholds['Std'][predicted_label])
+    # confidence_value = round(confidence_value*10000)/100
 
-    return label, confidence_value
+
+    return label, score # confidence_value
 
 def classify_box(image_tensor, binary_model):
-    print('Inferednce for moth/non-moth...')
+    # print('Inference for moth/non-moth...')
     output = binary_model(image_tensor)
 
     predictions = torch.nn.functional.softmax(output, dim=1)
@@ -93,7 +92,7 @@ def perform_inf(image_path, loc_model, binary_model, order_model, order_labels,
     image = Image.open(image_path).convert('RGB')
     original_image = image.copy()
     original_width, original_height = image.size
-    print('Inferednce for localisation...')
+    # print('Inference for localisation...')
     input_tensor = transform_loc(image).unsqueeze(0).to(device)
 
     all_boxes = pd.DataFrame(columns=['image_path',
@@ -106,8 +105,8 @@ def perform_inf(image_path, loc_model, binary_model, order_model, order_labels,
     with torch.no_grad():
         localization_outputs = loc_model(input_tensor)
 
-        print(image_path)
-        print('Number of objects:', len(localization_outputs[0]['boxes']))
+        # print(image_path)
+        # print('Number of objects:', len(localization_outputs[0]['boxes']))
 
         # for each detection
         for i in range(len(localization_outputs[0]['boxes'])):
@@ -141,7 +140,7 @@ def perform_inf(image_path, loc_model, binary_model, order_model, order_labels,
             # Annotate image with bounding box and class
             if class_name == 'moth':
                 # Perform the species classification
-                print('...Performing the inference')
+                # print('...Performing the inference')
                 species_name, species_confidence = classify_species(cropped_tensor, regional_model, regional_category_map)
 
                 draw = ImageDraw.Draw(original_image)
