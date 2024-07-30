@@ -31,7 +31,7 @@ device = torch.device('cpu')
 
 
 
-def display_menu(country, deployment):
+def display_menu(country, deployment, crops_interval):
     """Display the main menu and handle user interaction."""
 
     print("- Read in configs and credentials")
@@ -103,10 +103,12 @@ def display_menu(country, deployment):
                     species_labels=regional_category_map,
                    country=country, region=region, device=device,
                    order_data_thresholds=order_data_thresholds, 
-                   csv_file=csv_file)
+                   csv_file=csv_file, 
+                   crops_interval=crops_interval)
 
 if __name__ == "__main__":
-    print('  - Loading models...')
+    print(' - Loading models...')
+
     
     # Load AWS credentials and S3 bucket name from config file
     with open("./credentials.json", encoding="utf-8") as config_file:
@@ -140,9 +142,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script for downloading and processing images from S3.")
     parser.add_argument("--country", type=str, help="Specify the country name")
     parser.add_argument("--deployment", type=str, help="Specify the deployment name")
-    parser.add_argument("--keep_crops", action=argparse.BooleanOptionalAction, help="Whether to keep the crops")
-    parser.add_argument("--crops_interval", type=str, help="The interval for which to preserve the crops")
+    parser.add_argument("--keep_crops", action=argparse.BooleanOptionalAction, default=False, help="Whether to keep the crops")
+    parser.add_argument("--crops_interval", type=str, help="The interval for which to preserve the crops", default=10)
 
     args = parser.parse_args()
+    
+    crops_interval = args.crops_interval
+    if args.keep_crops: 
+        crops_interval = args.crops_interval
+        print(f' - Keeping crops every {crops_interval}mins')
+    else: 
+        print(' - Not keeping crops')
+        crops_interval = None
 
-    display_menu(args.country, args.deployment)
+    display_menu(args.country, args.deployment, crops_interval)

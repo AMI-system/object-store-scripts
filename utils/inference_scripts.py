@@ -72,7 +72,7 @@ def classify_box(image_tensor, binary_model):
 
 def perform_inf(image_path, loc_model, binary_model, order_model, order_labels,
                 regional_model, regional_category_map, country, region, device,
-                order_data_thresholds, csv_file):
+                order_data_thresholds, csv_file, save_crops):
     """Perform inference on an image."""
     
     transform_loc = transforms.Compose([
