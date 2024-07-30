@@ -128,6 +128,8 @@ async def get_objects(bucket_name, key, local_path, batch_size=100):
                 progress_bar.update(len(keys))
 
         progress_bar.close()
+    # Wait 250 ms for the underlying SSL connections to close
+    await asyncio.sleep(0.250)
 
 
 def clear_screen():
