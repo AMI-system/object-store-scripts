@@ -19,9 +19,9 @@ class Resnet50_species(torch.nn.Module):
         self.backbone = torchvision.models.resnet50(weights="DEFAULT")
         out_dim = self.backbone.fc.in_features
 
-        self.backbone = torch.nn.Sequential(*list(self.backbone.children())[:-2])
-        self.avgpool = torch.nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.classifier = torch.nn.Linear(out_dim, self.num_classes, bias=False)
+        self.backbone = nn.Sequential(*list(self.backbone.children())[:-2])
+        self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.classifier = nn.Linear(out_dim, self.num_classes, bias=False)
 
     def forward(self, x):
         x = self.backbone(x)
@@ -42,14 +42,14 @@ class ResNet50_order(nn.Module):
 
         self.expansion = 4
         self.out_channels = 512
-        
+
         #self.model_ft = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2) # 80.86, 25.6M
         self.model_ft = models.resnet50(pretrained=True)
-              
+
         # overwrite the 'fc' layer
         print("In features", self.model_ft.fc.in_features)
         self.model_ft.fc = nn.Identity() # Do nothing just pass input to output
-        
+
         # At least one layer
         self.drop = nn.Dropout(p=0.5)
         self.linear_lvl1 = nn.Linear(self.out_channels*self.expansion, self.out_channels)
@@ -60,16 +60,16 @@ class ResNet50_order(nn.Module):
         '''Forward propagation of pretrained ResNet-50.
         '''
         x = self.model_ft(x)
-        
+
         x = self.drop(x) # Dropout to add regularization
 
         level_1 = self.softmax_reg1(self.relu_lv1(self.linear_lvl1(x)))
         #level_1 = nn.Softmax(level_1)
-                
+
         return level_1
 
 def load_models(device):
-    
+
     # Load the localisation model
     weights_path = "/bask/homes/f/fspo1218/amber/data/mila_models/v1_localizmodel_2021-08-17-12-06.pt"
 
@@ -94,7 +94,7 @@ def load_models(device):
     state_dict = checkpoint.get("model_state_dict") or checkpoint
     classification_model.load_state_dict(state_dict)
     classification_model.eval()
-    
+
     # Load the order model
     savedWeights = '/bask/homes/f/fspo1218/amber/projects/MCC24-trap/model_order_060524/dhc_best_128.pth'
     thresholdFile = '/bask/homes/f/fspo1218/amber/projects/MCC24-trap/model_order_060524/thresholdsTestTrain.csv'
@@ -106,7 +106,7 @@ def load_models(device):
     # stds = data_thresholds["Std"].to_list()
     img_depth = 3
     num_classes=len(order_labels)
-    model_order = ResNet50_order(num_classes=num_classes) 
+    model_order = ResNet50_order(num_classes=num_classes)
     model_order.load_state_dict(torch.load(savedWeights, map_location=device))
     model_order = model_order.to(device)
     model_order.eval()
