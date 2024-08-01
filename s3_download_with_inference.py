@@ -11,15 +11,20 @@ import json
 import boto3
 import torch
 import pandas as pd
-import datetime
+import os
 import argparse
 
 from utils.aws_scripts import get_objects, get_deployments
 from utils.custom_models import load_models
 
-device = torch.device('cpu')
+# Use GPU if available
+print(f'  - Cuda available: {torch.cuda.is_available()}')
+if (torch.cuda.is_available()):
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
 
-def display_menu(country, deployment, crops_interval):
+def display_menu(country, deployment, crops_interval, csv_file, rerun_existing):
     """Display the main menu and handle user interaction."""
 
     print("- Read in configs and credentials")
@@ -29,7 +34,6 @@ def display_menu(country, deployment, crops_interval):
 
     all_deployments = get_deployments(username, password)
 
-    #countries = list({d["country"] for d in all_deployments if d["status"] == "active"})
     print('- Analysing: ', country)
 
     country_deployments = [
@@ -37,11 +41,6 @@ def display_menu(country, deployment, crops_interval):
         for d in all_deployments
         if d["country"] == country and d["status"] == "active"
     ]
-    country_deployments = country_deployments
-
-
-    #data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
-    data_type = "snapshot_images"
 
     s3_bucket_name = [
         d["country_code"]
@@ -53,6 +52,7 @@ def display_menu(country, deployment, crops_interval):
     remove_image = True
 
     print('  - Removing images after analysis: ', remove_image)
+    print('  - Rerun existing inferences: ', rerun_existing)
     print('  - Performing inference: ', perform_inference)
 
     if deployment == 'All':
@@ -71,9 +71,7 @@ def display_menu(country, deployment, crops_interval):
             and d["status"] == "active"
         ][0]
 
-
-
-        prefix = f"{dep_id}/{data_type}"
+        prefix = f"{dep_id}/snapshot_images"
         get_objects(session,
                     aws_credentials,
                     s3_bucket_name,
@@ -93,6 +91,7 @@ def display_menu(country, deployment, crops_interval):
                    device=device,
                    order_data_thresholds=order_data_thresholds,
                    csv_file=csv_file,
+                   rerun_existing=rerun_existing,
                    crops_interval=crops_interval)
 
 if __name__ == "__main__":
@@ -115,17 +114,10 @@ if __name__ == "__main__":
     local_directory_path = aws_credentials['directory']
     print('  - Scratch storage: ', local_directory_path)
 
-    date_time = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    csv_file = f'{local_directory_path}/mila_outputs_{date_time}.csv'
+    # date_time = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
+    # csv_file = f'{local_directory_path}/mila_outputs_{date_time}.csv'
 
-    all_boxes = pd.DataFrame(
-        columns=['image_path', 'box_score', 'x_min', 'y_min', 'x_max', 'y_max',
-                 'class_name', 'class_confidence',
-                 'order_name', 'order_confidence',
-                 'species_name', 'species_confidence',
-                 'cropped_image_path']
-    )
-    all_boxes.to_csv(csv_file, index=False)
+
 
     model_loc, classification_model, regional_model, regional_category_map, order_model, order_data_thresholds, order_labels = load_models(device)
 
@@ -138,6 +130,12 @@ if __name__ == "__main__":
     parser.add_argument("--crops_interval", type=str,
                         help="The interval for which to preserve the crops",
                         default=10)
+    parser.add_argument("--csv_file", type=str,
+                        help="The path to the csv file to save the results",
+                        default=f'./{(parser.parse_args().country).replace(" ", "_")}_results.csv')
+    parser.add_argument("--rerun_existing", action=argparse.BooleanOptionalAction,
+                        default=False,
+                        help="Whether to rerun images which have already been analysed")
 
     args = parser.parse_args()
 
@@ -149,4 +147,19 @@ if __name__ == "__main__":
         print(' - Not keeping crops')
         crops_interval = None
 
-    display_menu(args.country, args.deployment, crops_interval)
+    print(f'Saving results to: {args.csv_file}')
+
+    # if the file doesnt exist, print headers
+    csv_file = args.csv_file
+    if not os.path.isfile(csv_file):
+        all_boxes = pd.DataFrame(
+            columns=['image_path', 'analysis_datetime',
+                    'box_score', 'x_min', 'y_min', 'x_max', 'y_max',
+                    'class_name', 'class_confidence',
+                    'order_name', 'order_confidence',
+                    'species_name', 'species_confidence',
+                    'cropped_image_path']
+        )
+        all_boxes.to_csv(csv_file, index=False)
+
+    display_menu(args.country, args.deployment, crops_interval, csv_file, args.rerun_existing)

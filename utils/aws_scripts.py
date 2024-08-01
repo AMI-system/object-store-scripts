@@ -7,6 +7,7 @@ from boto3.s3.transfer import TransferConfig
 import os
 from datetime import datetime, timedelta
 from utils.inference_scripts import perform_inf
+import pandas as pd
 
 def get_deployments(username, password):
     """Fetch deployments from the API with authentication."""
@@ -87,24 +88,39 @@ def download_batch(s3_client, bucket_name, keys, local_path,
                    order_labels=None, species_model=None, species_labels=None,
                    country='UK', region='UKCEH', device=None,
                    order_data_thresholds=None, csv_file='results.csv',
-                   intervals=None):
+                   rerun_existing=False, intervals=None):
     """
     Download a batch of objects from S3.
     """
 
 
+    existing_df = pd.read_csv(csv_file)
+    print(existing_df['image_path'])
 
     for key in keys:
         file_path, filename = os.path.split(key)
 
+
         os.makedirs(os.path.join(local_path, file_path), exist_ok=True)
         download_path = os.path.join(local_path, file_path, filename)
+
+        print(download_path)
+        print(not rerun_existing)
+        print(download_path in existing_df['image_path'])
+        # check if file is in csv_file 'path' column
+        if not rerun_existing:
+            if existing_df['image_path'].str.contains(download_path).any():
+                print(f'{download_path} has already been processed. Skipping...')
+                continue
+
+
         download_object(s3_client, bucket_name, key, download_path,
                         perform_inference, remove_image,
                         localisation_model, binary_model,
                         order_model, order_labels, species_model,
                         species_labels, country, region, device,
-                        order_data_thresholds, csv_file, intervals)
+                        order_data_thresholds, csv_file,
+                        intervals)
 
 def count_files(s3_client, bucket_name, prefix):
     """
@@ -129,7 +145,7 @@ def get_objects(session, aws_credentials, bucket_name, key, local_path,
                 order_labels=None, species_model=None, species_labels=None,
                 country='UK', region='UKCEH', device=None,
                 order_data_thresholds=None, csv_file='results.csv',
-                crops_interval=None):
+                rerun_existing=False, crops_interval=None):
     """
     Fetch objects from the S3 bucket and download them synchronously in batches.
     """
@@ -165,7 +181,7 @@ def get_objects(session, aws_credentials, bucket_name, key, local_path,
                                localisation_model, binary_model, order_model,
                                order_labels, species_model, species_labels,
                                country, region, device, order_data_thresholds,
-                               csv_file, intervals)
+                               csv_file, rerun_existing, intervals)
                 keys = []
                 progress_bar.update(batch_size)
         if keys:
@@ -173,7 +189,8 @@ def get_objects(session, aws_credentials, bucket_name, key, local_path,
                            perform_inference, remove_image, localisation_model,
                            binary_model, order_model, order_labels,
                            species_model, species_labels, country, region,
-                           device, order_data_thresholds, csv_file, intervals)
+                           device, order_data_thresholds, csv_file,
+                           rerun_existing, intervals)
             progress_bar.update(len(keys))
 
     progress_bar.close()

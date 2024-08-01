@@ -3,9 +3,9 @@ import pandas as pd
 from PIL import Image, ImageDraw
 import torchvision.transforms as transforms
 import numpy as np
+from datetime import datetime
 
 # from utils.custom_models import Resnet50_species, ResNet50_order, load_models
-
 
 def classify_species(image_tensor, regional_model, regional_category_map):
     '''
@@ -100,7 +100,7 @@ def perform_inf(image_path, loc_model, binary_model, order_model,
     input_tensor = transform_loc(image).unsqueeze(0).to(device)
 
     all_boxes = pd.DataFrame(
-        columns=['image_path',
+        columns=['image_path', 'analysis_datetime',
                 'box_score', 'x_min', 'y_min', 'x_max', 'y_max', #localisation info
                 'class_name', 'class_confidence', # binary class info
                 'order_name', 'order_confidence', # order info
@@ -175,12 +175,12 @@ def perform_inf(image_path, loc_model, binary_model, order_model,
 
             # append to csv with pandas
             df = pd.DataFrame(
-                [[image_path,
+                [[image_path, str(datetime.now()),
                     box_score, x_min, y_min, x_max, y_max,
                     class_name, class_confidence ,
                     order_name, order_confidence,
                     species_name, species_confidence, crop_path]],
-                columns=['image_path',
+                columns=['image_path', 'analysis_datetime',
                         'box_score', 'x_min', 'y_min', 'x_max', 'y_max',
                         'class_name', 'class_confidence',
                         'order_name', 'order_confidence',
