@@ -104,7 +104,7 @@ async def get_objects(bucket_name, key, local_path, batch_size=100):
     ) as s3_client:
 
         total_files = await count_files(s3_client, bucket_name, key)
-        print(f'{bucket_name}: {total_files}')
+        print(f"{bucket_name}: {total_files}")
 
         # paginator = s3_client.get_paginator("list_objects_v2")
         # operation_parameters = {"Bucket": bucket_name, "Prefix": key}
@@ -157,8 +157,8 @@ def display_menu():
     print("Download Files")
     print("============\n")
 
-    username = aws_credentials['UKCEH_username']  # get_input("API Username")
-    password = aws_credentials['UKCEH_password']  # getpass.getpass("API Password: ")
+    username = aws_credentials["UKCEH_username"]  # get_input("API Username")
+    password = aws_credentials["UKCEH_password"]  # getpass.getpass("API Password: ")
 
     all_deployments = get_deployments(username, password)
 
@@ -172,7 +172,9 @@ def display_menu():
     ]
     country_deployments = country_deployments
 
-    deployment = get_choice("\nDeployments:", country_deployments + ['All of the above'])
+    deployment = get_choice(
+        "\nDeployments:", country_deployments + ["All of the above"]
+    )
 
     data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
     data_type = get_choice("\nData type:", data_types)
@@ -189,7 +191,7 @@ def display_menu():
     #     if os.path.isdir(local_directory_path):
     #         break
     #     print("Invalid directory. Please try again.")
-    local_directory_path = aws_credentials['directory']
+    local_directory_path = aws_credentials["directory"]
 
     # perform_inference = get_input("Perform inference on images? (y/n)").lower() == "y"
     # remove_image = get_input("Remove images after inference? (y/n)").lower() == "y"
@@ -198,7 +200,7 @@ def display_menu():
     # print('Performing inference', perform_inference)
 
     # ---------
-    if deployment == 'All of the above':
+    if deployment == "All of the above":
         deps = country_deployments
     else:
         deps = [deployment]
@@ -216,9 +218,7 @@ def display_menu():
         prefix = f"{dep_id}/{data_type}"
         print(region)
         # Run the asynchronous download
-        asyncio.run(
-            get_objects(s3_bucket_name, prefix, local_directory_path)
-        )
+        asyncio.run(get_objects(s3_bucket_name, prefix, local_directory_path))
 
 
 if __name__ == "__main__":

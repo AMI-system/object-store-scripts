@@ -31,13 +31,26 @@ def get_deployments(username, password):
         sys.exit(1)
 
 
-def download_object(s3_client, bucket_name, key, download_path,
-                    perform_inference=False, remove_image=False,
-                    localisation_model=None, binary_model=None,
-                    order_model=None, order_labels=None, species_model=None,
-                    species_labels=None, country='UK', region='UKCEH',
-                    device=None, order_data_thresholds=None,
-                    csv_file='results.csv', intervals=None):
+def download_object(
+    s3_client,
+    bucket_name,
+    key,
+    download_path,
+    perform_inference=False,
+    remove_image=False,
+    localisation_model=None,
+    binary_model=None,
+    order_model=None,
+    order_labels=None,
+    species_model=None,
+    species_labels=None,
+    country="UK",
+    region="UKCEH",
+    device=None,
+    order_data_thresholds=None,
+    csv_file="results.csv",
+    intervals=None,
+):
     """
     Download a single object from S3 synchronously.
     """
@@ -51,9 +64,7 @@ def download_object(s3_client, bucket_name, key, download_path,
     )
 
     try:
-        s3_client.download_file(
-            bucket_name, key, download_path, Config=transfer_config
-        )
+        s3_client.download_file(bucket_name, key, download_path, Config=transfer_config)
 
         path_df = get_datetime_from_string(os.path.basename(key))
 
@@ -63,16 +74,24 @@ def download_object(s3_client, bucket_name, key, download_path,
         else:
             save_crops = False
         if save_crops:
-            print(f'  - Saving crops for: {os.path.basename(key)}')
+            print(f"  - Saving crops for: {os.path.basename(key)}")
 
         if perform_inference:
-            perform_inf(download_path, loc_model=localisation_model,
-                        binary_model=binary_model, order_model=order_model,
-                        order_labels=order_labels, regional_model=species_model,
-                        regional_category_map=species_labels, country=country,
-                        region=region, device=device,
-                        order_data_thresholds=order_data_thresholds,
-                        csv_file=csv_file, save_crops=save_crops)
+            perform_inf(
+                download_path,
+                loc_model=localisation_model,
+                binary_model=binary_model,
+                order_model=order_model,
+                order_labels=order_labels,
+                regional_model=species_model,
+                regional_category_map=species_labels,
+                country=country,
+                region=region,
+                device=device,
+                order_data_thresholds=order_data_thresholds,
+                csv_file=csv_file,
+                save_crops=save_crops,
+            )
         if remove_image:
             os.remove(download_path)
     except Exception as e:
@@ -80,24 +99,38 @@ def download_object(s3_client, bucket_name, key, download_path,
 
 
 def get_datetime_from_string(input):
-    dt = input.split('-')[1]
-    dt = datetime.strptime(dt, '%Y%m%d%H%M%S')
+    dt = input.split("-")[1]
+    dt = datetime.strptime(dt, "%Y%m%d%H%M%S")
     return dt
 
 
-def download_batch(s3_client, bucket_name, keys, local_path,
-                   perform_inference=False, remove_image=False,
-                   localisation_model=None, binary_model=None, order_model=None,
-                   order_labels=None, species_model=None, species_labels=None,
-                   country='UK', region='UKCEH', device=None,
-                   order_data_thresholds=None, csv_file='results.csv',
-                   rerun_existing=False, intervals=None):
+def download_batch(
+    s3_client,
+    bucket_name,
+    keys,
+    local_path,
+    perform_inference=False,
+    remove_image=False,
+    localisation_model=None,
+    binary_model=None,
+    order_model=None,
+    order_labels=None,
+    species_model=None,
+    species_labels=None,
+    country="UK",
+    region="UKCEH",
+    device=None,
+    order_data_thresholds=None,
+    csv_file="results.csv",
+    rerun_existing=False,
+    intervals=None,
+):
     """
     Download a batch of objects from S3.
     """
 
     existing_df = pd.read_csv(csv_file)
-    print(existing_df['image_path'])
+    print(existing_df["image_path"])
 
     for key in keys:
         file_path, filename = os.path.split(key)
@@ -107,20 +140,33 @@ def download_batch(s3_client, bucket_name, keys, local_path,
 
         print(download_path)
         print(not rerun_existing)
-        print(download_path in existing_df['image_path'])
+        print(download_path in existing_df["image_path"])
         # check if file is in csv_file 'path' column
         if not rerun_existing:
-            if existing_df['image_path'].str.contains(download_path).any():
-                print(f'{download_path} has already been processed. Skipping...')
+            if existing_df["image_path"].str.contains(download_path).any():
+                print(f"{download_path} has already been processed. Skipping...")
                 continue
 
-        download_object(s3_client, bucket_name, key, download_path,
-                        perform_inference, remove_image,
-                        localisation_model, binary_model,
-                        order_model, order_labels, species_model,
-                        species_labels, country, region, device,
-                        order_data_thresholds, csv_file,
-                        intervals)
+        download_object(
+            s3_client,
+            bucket_name,
+            key,
+            download_path,
+            perform_inference,
+            remove_image,
+            localisation_model,
+            binary_model,
+            order_model,
+            order_labels,
+            species_model,
+            species_labels,
+            country,
+            region,
+            device,
+            order_data_thresholds,
+            csv_file,
+            intervals,
+        )
 
 
 def count_files(s3_client, bucket_name, prefix):
@@ -132,8 +178,8 @@ def count_files(s3_client, bucket_name, prefix):
     page_iterator = paginator.paginate(**operation_parameters)
 
     count = 0
-    first_page = ''
-    last_page = ''
+    first_page = ""
+    last_page = ""
     for page in page_iterator:
         if count == 0:
             first_page = page.get("Contents", [])[0]["Key"]
@@ -142,13 +188,29 @@ def count_files(s3_client, bucket_name, prefix):
     return count, first_page, last_page
 
 
-def get_objects(session, aws_credentials, bucket_name, key, local_path,
-                batch_size=100, perform_inference=False, remove_image=False,
-                localisation_model=None, binary_model=None, order_model=None,
-                order_labels=None, species_model=None, species_labels=None,
-                country='UK', region='UKCEH', device=None,
-                order_data_thresholds=None, csv_file='results.csv',
-                rerun_existing=False, crops_interval=None):
+def get_objects(
+    session,
+    aws_credentials,
+    bucket_name,
+    key,
+    local_path,
+    batch_size=100,
+    perform_inference=False,
+    remove_image=False,
+    localisation_model=None,
+    binary_model=None,
+    order_model=None,
+    order_labels=None,
+    species_model=None,
+    species_labels=None,
+    country="UK",
+    region="UKCEH",
+    device=None,
+    order_data_thresholds=None,
+    csv_file="results.csv",
+    rerun_existing=False,
+    crops_interval=None,
+):
     """
     Fetch objects from the S3 bucket and download them synchronously in batches.
     """
@@ -160,8 +222,9 @@ def get_objects(session, aws_credentials, bucket_name, key, local_path,
     operation_parameters = {"Bucket": bucket_name, "Prefix": key}
     page_iterator = paginator.paginate(**operation_parameters)
 
-    progress_bar = tqdm.tqdm(total=total_files,
-                             desc="Download files from server synchronously")
+    progress_bar = tqdm.tqdm(
+        total=total_files, desc="Download files from server synchronously"
+    )
 
     if crops_interval is not None:
         first_dt = get_datetime_from_string(first_dt)
@@ -180,21 +243,51 @@ def get_objects(session, aws_credentials, bucket_name, key, local_path,
             keys.append(obj["Key"])
 
             if len(keys) >= batch_size:
-                download_batch(s3_client, bucket_name, keys, local_path,
-                               perform_inference, remove_image,
-                               localisation_model, binary_model, order_model,
-                               order_labels, species_model, species_labels,
-                               country, region, device, order_data_thresholds,
-                               csv_file, rerun_existing, intervals)
+                download_batch(
+                    s3_client,
+                    bucket_name,
+                    keys,
+                    local_path,
+                    perform_inference,
+                    remove_image,
+                    localisation_model,
+                    binary_model,
+                    order_model,
+                    order_labels,
+                    species_model,
+                    species_labels,
+                    country,
+                    region,
+                    device,
+                    order_data_thresholds,
+                    csv_file,
+                    rerun_existing,
+                    intervals,
+                )
                 keys = []
                 progress_bar.update(batch_size)
         if keys:
-            download_batch(s3_client, bucket_name, keys, local_path,
-                           perform_inference, remove_image, localisation_model,
-                           binary_model, order_model, order_labels,
-                           species_model, species_labels, country, region,
-                           device, order_data_thresholds, csv_file,
-                           rerun_existing, intervals)
+            download_batch(
+                s3_client,
+                bucket_name,
+                keys,
+                local_path,
+                perform_inference,
+                remove_image,
+                localisation_model,
+                binary_model,
+                order_model,
+                order_labels,
+                species_model,
+                species_labels,
+                country,
+                region,
+                device,
+                order_data_thresholds,
+                csv_file,
+                rerun_existing,
+                intervals,
+            )
             progress_bar.update(len(keys))
 
     progress_bar.close()

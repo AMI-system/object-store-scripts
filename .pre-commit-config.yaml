@@ -6,6 +6,12 @@ repos:
     -   id: check-added-large-files
         args: ['--maxkb=3000']
 
+-   repo: https://github.com/psf/black
+    rev: 22.10.0
+    hooks:
+      - id: black
+        language_version: python3
+
 -   repo: https://github.com/PyCQA/flake8
     rev: 6.0.0
     hooks:
