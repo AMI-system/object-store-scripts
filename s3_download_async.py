@@ -9,15 +9,12 @@ AWS credentials and S3 bucket name are loaded from a configuration file
 
 import sys
 import os
-import getpass
 import json
 import asyncio
 import requests
 from requests.auth import HTTPBasicAuth
 import aioboto3
 from boto3.s3.transfer import TransferConfig
-import tqdm.asyncio
-
 
 # Load AWS credentials and S3 bucket name from config file
 with open("./credentials.json", encoding="utf-8") as config_file:
@@ -160,8 +157,8 @@ def display_menu():
     print("Download Files")
     print("============\n")
 
-    username = aws_credentials['UKCEH_username'] #get_input("API Username")
-    password = aws_credentials['UKCEH_password'] #getpass.getpass("API Password: ")
+    username = aws_credentials['UKCEH_username']  # get_input("API Username")
+    password = aws_credentials['UKCEH_password']  # getpass.getpass("API Password: ")
 
     all_deployments = get_deployments(username, password)
 
@@ -176,7 +173,6 @@ def display_menu():
     country_deployments = country_deployments
 
     deployment = get_choice("\nDeployments:", country_deployments + ['All of the above'])
-
 
     data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
     data_type = get_choice("\nData type:", data_types)
@@ -201,11 +197,10 @@ def display_menu():
     # print('Removing images', remove_image)
     # print('Performing inference', perform_inference)
 
-
-    #---------
+    # ---------
     if deployment == 'All of the above':
         deps = country_deployments
-    else :
+    else:
         deps = [deployment]
     for region in deps:
         location_name, camera_id = region.split(" - ")

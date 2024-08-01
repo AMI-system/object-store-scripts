@@ -24,8 +24,11 @@ if (torch.cuda.is_available()):
 else:
     device = torch.device("cpu")
 
+
 def display_menu(country, deployment, crops_interval, csv_file, rerun_existing):
-    """Display the main menu and handle user interaction."""
+    """
+    Display the main menu and handle user interaction.
+    """
 
     print("- Read in configs and credentials")
 
@@ -57,7 +60,7 @@ def display_menu(country, deployment, crops_interval, csv_file, rerun_existing):
 
     if deployment == 'All':
         deps = country_deployments
-    else :
+    else:
         deps = [deployment]
     for region in deps:
         print(f'  - Deployment: {region}')
@@ -86,22 +89,22 @@ def display_menu(country, deployment, crops_interval, csv_file, rerun_existing):
                     order_labels=order_labels,
                     species_model=regional_model,
                     species_labels=regional_category_map,
-                   country=country,
-                   region=region,
-                   device=device,
-                   order_data_thresholds=order_data_thresholds,
-                   csv_file=csv_file,
-                   rerun_existing=rerun_existing,
-                   crops_interval=crops_interval)
+                    country=country,
+                    region=region,
+                    device=device,
+                    order_data_thresholds=order_data_thresholds,
+                    csv_file=csv_file,
+                    rerun_existing=rerun_existing,
+                    crops_interval=crops_interval)
+
 
 if __name__ == "__main__":
-    print(' - Loading models...')
 
+    print(' - Loading models...')
 
     # Load AWS credentials and S3 bucket name from config file
     with open("./credentials.json", encoding="utf-8") as config_file:
         aws_credentials = json.load(config_file)
-
 
     # Initialize boto3 session
     session = boto3.Session(
@@ -110,14 +113,11 @@ if __name__ == "__main__":
         region_name=aws_credentials["AWS_REGION"],
     )
 
-
     local_directory_path = aws_credentials['directory']
     print('  - Scratch storage: ', local_directory_path)
 
     # date_time = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
     # csv_file = f'{local_directory_path}/mila_outputs_{date_time}.csv'
-
-
 
     model_loc, classification_model, regional_model, regional_category_map, order_model, order_data_thresholds, order_labels = load_models(device)
 
@@ -154,11 +154,11 @@ if __name__ == "__main__":
     if not os.path.isfile(csv_file):
         all_boxes = pd.DataFrame(
             columns=['image_path', 'analysis_datetime',
-                    'box_score', 'x_min', 'y_min', 'x_max', 'y_max',
-                    'class_name', 'class_confidence',
-                    'order_name', 'order_confidence',
-                    'species_name', 'species_confidence',
-                    'cropped_image_path']
+                     'box_score', 'x_min', 'y_min', 'x_max', 'y_max',
+                     'class_name', 'class_confidence',
+                     'order_name', 'order_confidence',
+                     'species_name', 'species_confidence',
+                     'cropped_image_path']
         )
         all_boxes.to_csv(csv_file, index=False)
 

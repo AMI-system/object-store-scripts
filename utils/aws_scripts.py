@@ -8,9 +8,12 @@ import os
 from datetime import datetime, timedelta
 from utils.inference_scripts import perform_inf
 import pandas as pd
+import sys
+
 
 def get_deployments(username, password):
     """Fetch deployments from the API with authentication."""
+
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
         response = requests.get(
@@ -26,6 +29,7 @@ def get_deployments(username, password):
     except Exception as err:
         print(f"Error: {err}")
         sys.exit(1)
+
 
 def download_object(s3_client, bucket_name, key, download_path,
                     perform_inference=False, remove_image=False,
@@ -53,7 +57,6 @@ def download_object(s3_client, bucket_name, key, download_path,
 
         path_df = get_datetime_from_string(os.path.basename(key))
 
-
         # If crops are saved, define the frequecy
         if intervals:
             save_crops = path_df in intervals
@@ -61,8 +64,6 @@ def download_object(s3_client, bucket_name, key, download_path,
             save_crops = False
         if save_crops:
             print(f'  - Saving crops for: {os.path.basename(key)}')
-
-
 
         if perform_inference:
             perform_inf(download_path, loc_model=localisation_model,
@@ -77,10 +78,12 @@ def download_object(s3_client, bucket_name, key, download_path,
     except Exception as e:
         print(f"Error downloading {bucket_name}/{key}: {e}")
 
+
 def get_datetime_from_string(input):
     dt = input.split('-')[1]
     dt = datetime.strptime(dt, '%Y%m%d%H%M%S')
     return dt
+
 
 def download_batch(s3_client, bucket_name, keys, local_path,
                    perform_inference=False, remove_image=False,
@@ -93,13 +96,11 @@ def download_batch(s3_client, bucket_name, keys, local_path,
     Download a batch of objects from S3.
     """
 
-
     existing_df = pd.read_csv(csv_file)
     print(existing_df['image_path'])
 
     for key in keys:
         file_path, filename = os.path.split(key)
-
 
         os.makedirs(os.path.join(local_path, file_path), exist_ok=True)
         download_path = os.path.join(local_path, file_path, filename)
@@ -113,7 +114,6 @@ def download_batch(s3_client, bucket_name, keys, local_path,
                 print(f'{download_path} has already been processed. Skipping...')
                 continue
 
-
         download_object(s3_client, bucket_name, key, download_path,
                         perform_inference, remove_image,
                         localisation_model, binary_model,
@@ -121,6 +121,7 @@ def download_batch(s3_client, bucket_name, keys, local_path,
                         species_labels, country, region, device,
                         order_data_thresholds, csv_file,
                         intervals)
+
 
 def count_files(s3_client, bucket_name, prefix):
     """
@@ -134,10 +135,12 @@ def count_files(s3_client, bucket_name, prefix):
     first_page = ''
     last_page = ''
     for page in page_iterator:
-        if count == 0: first_page = page.get("Contents", [])[0]["Key"]
+        if count == 0:
+            first_page = page.get("Contents", [])[0]["Key"]
         count += page.get("KeyCount", 0)
         last_page = page.get("Contents", [])[0]["Key"]
     return count, first_page, last_page
+
 
 def get_objects(session, aws_credentials, bucket_name, key, local_path,
                 batch_size=100, perform_inference=False, remove_image=False,
@@ -168,7 +171,8 @@ def get_objects(session, aws_credentials, bucket_name, key, local_path,
         while t < last_dt:
             intervals = intervals + [t]
             t = t + timedelta(minutes=crops_interval)
-    else: intervals=None
+    else:
+        intervals = None
 
     keys = []
     for page in page_iterator:

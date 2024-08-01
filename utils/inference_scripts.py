@@ -7,6 +7,7 @@ from datetime import datetime
 
 # from utils.custom_models import Resnet50_species, ResNet50_order, load_models
 
+
 def classify_species(image_tensor, regional_model, regional_category_map):
     '''
     Classify the species of the moth using the regional model.
@@ -26,6 +27,7 @@ def classify_species(image_tensor, regional_model, regional_category_map):
     score = 1 - predictions.max(axis=1).astype(float)[0]
     return label, score
 
+
 def classify_order(image_tensor, order_model, order_labels, order_data_thresholds):
     '''
     Classify the order of the object using the order model by Bjerge et al.
@@ -34,7 +36,7 @@ def classify_order(image_tensor, order_model, order_labels, order_data_threshold
 
     # print('Inference for order...')
     pred = order_model(image_tensor)
-    pred = torch.nn.functional.softmax(pred, dim=1) #.cpu().numpy()[0]) * 100
+    pred = torch.nn.functional.softmax(pred, dim=1)  # .cpu().numpy()[0]) * 100
 
     predictions = pred.cpu().detach().numpy()
     predicted_label = np.argmax(predictions, axis=1)[0]
@@ -43,6 +45,7 @@ def classify_order(image_tensor, order_model, order_labels, order_data_threshold
     label = order_labels[predicted_label]
 
     return label, score
+
 
 def classify_box(image_tensor, binary_model):
     '''
@@ -66,6 +69,7 @@ def classify_box(image_tensor, binary_model):
     score = predictions.max(axis=1).astype(float)[0]
     return label, score
 
+
 def perform_inf(image_path, loc_model, binary_model, order_model,
                 order_labels, regional_model, regional_category_map,
                 country, region,
@@ -85,13 +89,11 @@ def perform_inf(image_path, loc_model, binary_model, order_model,
                              std=[0.229, 0.224, 0.225])
     ])
 
-    transform_species = transforms.Compose(
-            [
-                transforms.Resize((300, 300)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.5,0.5, 0.5], std=[0.5,0.5, 0.5]),
-            ]
-        )
+    transform_species = transforms.Compose([
+        transforms.Resize((300, 300)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
 
     image = Image.open(image_path).convert('RGB')
     original_image = image.copy()
@@ -101,13 +103,14 @@ def perform_inf(image_path, loc_model, binary_model, order_model,
 
     all_boxes = pd.DataFrame(
         columns=['image_path', 'analysis_datetime',
-                'box_score', 'x_min', 'y_min', 'x_max', 'y_max', #localisation info
-                'class_name', 'class_confidence', # binary class info
-                'order_name', 'order_confidence', # order info
-                'species_name', 'species_confidence' # species info
-            ])
+                 'box_score', 'x_min', 'y_min', 'x_max', 'y_max',  # localisation info
+                 'class_name', 'class_confidence',  # binary class info
+                 'order_name', 'order_confidence',  # order info
+                 'species_name', 'species_confidence'  # species info
+                 ]
+    )
 
-      # Perform object localization
+    # Perform object localization
     with torch.no_grad():
         localization_outputs = loc_model(input_tensor)
 
@@ -131,7 +134,6 @@ def perform_inf(image_path, loc_model, binary_model, order_model,
                 crop_path = image_path.split('.')[0] + f'_crop{i}.jpg'
                 cropped_image.save(crop_path)
 
-
             box_width = x_max - x_min
             box_height = y_max - y_min
 
@@ -154,7 +156,6 @@ def perform_inf(image_path, loc_model, binary_model, order_model,
                                                           order_labels,
                                                           order_data_thresholds)
 
-
             # Annotate image with bounding box and class
             if class_name == 'moth':
                 # Perform the species classification
@@ -176,16 +177,17 @@ def perform_inf(image_path, loc_model, binary_model, order_model,
             # append to csv with pandas
             df = pd.DataFrame(
                 [[image_path, str(datetime.now()),
-                    box_score, x_min, y_min, x_max, y_max,
-                    class_name, class_confidence ,
-                    order_name, order_confidence,
-                    species_name, species_confidence, crop_path]],
+                  box_score, x_min, y_min, x_max, y_max,
+                  class_name, class_confidence,
+                  order_name, order_confidence,
+                  species_name, species_confidence, crop_path]],
                 columns=['image_path', 'analysis_datetime',
-                        'box_score', 'x_min', 'y_min', 'x_max', 'y_max',
-                        'class_name', 'class_confidence',
-                        'order_name', 'order_confidence',
-                        'species_name', 'species_confidence',
-                        'cropped_image_path'])
+                         'box_score', 'x_min', 'y_min', 'x_max', 'y_max',
+                         'class_name', 'class_confidence',
+                         'order_name', 'order_confidence',
+                         'species_name', 'species_confidence',
+                         'cropped_image_path']
+            )
             all_boxes = pd.concat([all_boxes, df])
             df.to_csv(csv_file, mode='a', header=False, index=False)
 

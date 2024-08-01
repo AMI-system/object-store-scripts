@@ -8,6 +8,7 @@ from torchvision import models
 import pandas as pd
 import json
 
+
 class Resnet50_species(torch.nn.Module):
     def __init__(self, num_classes):
         """
@@ -31,6 +32,7 @@ class Resnet50_species(torch.nn.Module):
 
         return x
 
+
 class ResNet50_order(nn.Module):
     '''ResNet-50 Architecture with pretrained weights
     '''
@@ -43,16 +45,16 @@ class ResNet50_order(nn.Module):
         self.expansion = 4
         self.out_channels = 512
 
-        #self.model_ft = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2) # 80.86, 25.6M
+        # self.model_ft = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2) # 80.86, 25.6M
         self.model_ft = models.resnet50(pretrained=True)
 
         # overwrite the 'fc' layer
         print("In features", self.model_ft.fc.in_features)
-        self.model_ft.fc = nn.Identity() # Do nothing just pass input to output
+        self.model_ft.fc = nn.Identity()  # Do nothing just pass input to output
 
         # At least one layer
         self.drop = nn.Dropout(p=0.5)
-        self.linear_lvl1 = nn.Linear(self.out_channels*self.expansion, self.out_channels)
+        self.linear_lvl1 = nn.Linear(self.out_channels * self.expansion, self.out_channels)
         self.relu_lv1 = nn.ReLU(inplace=False)
         self.softmax_reg1 = nn.Linear(self.out_channels, num_classes)
 
@@ -61,12 +63,13 @@ class ResNet50_order(nn.Module):
         '''
         x = self.model_ft(x)
 
-        x = self.drop(x) # Dropout to add regularization
+        x = self.drop(x)  # Dropout to add regularization
 
         level_1 = self.softmax_reg1(self.relu_lv1(self.linear_lvl1(x)))
-        #level_1 = nn.Softmax(level_1)
+        # level_1 = nn.Softmax(level_1)
 
         return level_1
+
 
 def load_models(device):
 
@@ -86,8 +89,8 @@ def load_models(device):
 
     # Load the binary model
     weights_path = "/bask/homes/f/fspo1218/amber/data/mila_models/moth-nonmoth-effv2b3_20220506_061527_30.pth"
-    labels_path = "/bask/homes/f/fspo1218/amber/data/mila_models/05-moth-nonmoth_category_map.json"
-    num_classes=2 # moth, non-moth
+    # labels_path = "/bask/homes/f/fspo1218/amber/data/mila_models/05-moth-nonmoth_category_map.json"
+    num_classes = 2  # moth, non-moth
     classification_model = timm.create_model("tf_efficientnetv2_b3", num_classes=num_classes, weights=None)
     classification_model = classification_model.to(device)
     checkpoint = torch.load(weights_path, map_location=device)
@@ -98,14 +101,14 @@ def load_models(device):
     # Load the order model
     savedWeights = '/bask/homes/f/fspo1218/amber/projects/MCC24-trap/model_order_060524/dhc_best_128.pth'
     thresholdFile = '/bask/homes/f/fspo1218/amber/projects/MCC24-trap/model_order_060524/thresholdsTestTrain.csv'
-    img_size = 128
+    # img_size = 128
     order_data_thresholds = pd.read_csv(thresholdFile)
     order_labels = order_data_thresholds["ClassName"].to_list()
     # thresholds = data_thresholds["Threshold"].to_list()
     # means = data_thresholds["Mean"].to_list()
     # stds = data_thresholds["Std"].to_list()
-    img_depth = 3
-    num_classes=len(order_labels)
+    # img_depth = 3
+    num_classes = len(order_labels)
     model_order = ResNet50_order(num_classes=num_classes)
     model_order.load_state_dict(torch.load(savedWeights, map_location=device))
     model_order = model_order.to(device)

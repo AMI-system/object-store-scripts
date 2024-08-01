@@ -10,3 +10,4 @@ tqdm
 yaspin
 flake8-black
 pylint
+pre-commit
