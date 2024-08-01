@@ -17,27 +17,27 @@ import argparse
 from utils.aws_scripts import get_objects, get_deployments
 from utils.custom_models import load_models
 
-# Use GPU if available
-print(f"  - Cuda available: {torch.cuda.is_available()}")
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-else:
-    device = torch.device("cpu")
 
-
-def display_menu(country, deployment, crops_interval, csv_file, rerun_existing):
+def display_menu(
+    country, deployment, crops_interval, csv_file, rerun_existing, local_directory_path
+):
     """
     Display the main menu and handle user interaction.
     """
 
-    print("- Read in configs and credentials")
-
     username = aws_credentials["UKCEH_username"]
     password = aws_credentials["UKCEH_password"]
 
+    perform_inference = True
+    remove_image = True
+
+    print(f"\033[93m - Removing images after analysis: {remove_image}\033[0m")
+    print(f"\033[93m - Performing inference: {perform_inference}\033[0m")
+    print(f"\033[93m - Rerun existing inferences: {rerun_existing}\033[0m")
+
     all_deployments = get_deployments(username, password)
 
-    print("- Analysing: ", country)
+    print(f"\033[96m\033[1mAnalysing: {country}\033[0m\033[0m")
 
     country_deployments = [
         f"{d['location_name']} - {d['camera_id']}"
@@ -51,19 +51,12 @@ def display_menu(country, deployment, crops_interval, csv_file, rerun_existing):
         if d["country"] == country and d["status"] == "active"
     ][0].lower()
 
-    perform_inference = True
-    remove_image = True
-
-    print("  - Removing images after analysis: ", remove_image)
-    print("  - Rerun existing inferences: ", rerun_existing)
-    print("  - Performing inference: ", perform_inference)
-
     if deployment == "All":
         deps = country_deployments
     else:
         deps = [deployment]
     for region in deps:
-        print(f"  - Deployment: {region}")
+        print(f"\033[96m - Deployment: {region}\033[0m")
         location_name, camera_id = region.split(" - ")
         dep_id = [
             d["deployment_id"]
@@ -98,29 +91,27 @@ def display_menu(country, deployment, crops_interval, csv_file, rerun_existing):
             rerun_existing=rerun_existing,
             crops_interval=crops_interval,
         )
+        print("\N{White Heavy Check Mark}\033[0m\033[0m")
 
 
 if __name__ == "__main__":
 
-    print(" - Loading models...")
+    # Use GPU if available
 
-    # Load AWS credentials and S3 bucket name from config file
-    with open("./credentials.json", encoding="utf-8") as config_file:
-        aws_credentials = json.load(config_file)
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(
+            "\033[95m\033[1mCuda available, using GPU "
+            + "\N{White Heavy Check Mark}\033[0m\033[0m"
+        )
+    else:
+        device = torch.device("cpu")
+        print(
+            "\033[95m\033[1mCuda not available, using CPU "
+            + "\N{Cross Mark}\033[0m\033[0m"
+        )
 
-    # Initialize boto3 session
-    session = boto3.Session(
-        aws_access_key_id=aws_credentials["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=aws_credentials["AWS_SECRET_ACCESS_KEY"],
-        region_name=aws_credentials["AWS_REGION"],
-    )
-
-    local_directory_path = aws_credentials["directory"]
-    print("  - Scratch storage: ", local_directory_path)
-
-    # date_time = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    # csv_file = f'{local_directory_path}/mila_outputs_{date_time}.csv'
-
+    print("\033[96m\033[1mLoading in models...\033[0m\033[0m", end="")
     (
         model_loc,
         classification_model,
@@ -130,6 +121,18 @@ if __name__ == "__main__":
         order_data_thresholds,
         order_labels,
     ) = load_models(device)
+    print("\N{White Heavy Check Mark}")
+
+    print("\033[96m\033[1mInitialising the JASMINE session...\033[0m\033[0m", end="")
+    # Load AWS credentials and S3 bucket name from config file
+    with open("./credentials.json", encoding="utf-8") as config_file:
+        aws_credentials = json.load(config_file)
+    session = boto3.Session(
+        aws_access_key_id=aws_credentials["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=aws_credentials["AWS_SECRET_ACCESS_KEY"],
+        region_name=aws_credentials["AWS_REGION"],
+    )
+    print("\N{White Heavy Check Mark}")
 
     parser = argparse.ArgumentParser(
         description="Script for downloading and processing images from S3."
@@ -149,10 +152,16 @@ if __name__ == "__main__":
         default=10,
     )
     parser.add_argument(
+        "--data_storage_path",
+        type=str,
+        help="The path to scratch data storage",
+        default="./data/",
+    )
+    parser.add_argument(
         "--csv_file",
         type=str,
         help="The path to the csv file to save the results",
-        default=f'./{(parser.parse_args().country).replace(" ", "_")}_results.csv',
+        default=f'{parser.parse_args().data_storage_path}/{(parser.parse_args().country).replace(" ", "_")}_results.csv',
     )
     parser.add_argument(
         "--rerun_existing",
@@ -163,15 +172,23 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # check that the data storage path exists
+    data_storage_path = os.path.abspath(args.data_storage_path)
+    if not os.path.isdir(data_storage_path):
+        os.makedirs(data_storage_path)
+
+    print("\033[93m\033[1m" + "Pipeline parameters" + "\033[0m\033[0m")
+    print(f"\033[93m - Scratch and crops storage: {data_storage_path}\033[0m")
+
     crops_interval = args.crops_interval
     if args.keep_crops:
         crops_interval = args.crops_interval
-        print(f" - Keeping crops every {crops_interval}mins")
+        print(f"\033[93m - Keeping crops every {crops_interval}mins\033[0m")
     else:
-        print(" - Not keeping crops")
+        print("\033[93m - Not keeping crops\033[0m")
         crops_interval = None
 
-    print(f"Saving results to: {args.csv_file}")
+    print(f"\033[93m - Saving results to: {args.csv_file}\033[0m")
 
     # if the file doesnt exist, print headers
     csv_file = args.csv_file
@@ -197,5 +214,10 @@ if __name__ == "__main__":
         all_boxes.to_csv(csv_file, index=False)
 
     display_menu(
-        args.country, args.deployment, crops_interval, csv_file, args.rerun_existing
+        args.country,
+        args.deployment,
+        crops_interval,
+        csv_file,
+        args.rerun_existing,
+        data_storage_path,
     )

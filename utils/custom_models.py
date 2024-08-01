@@ -2,6 +2,7 @@
 
 import torch
 import torchvision
+from torchvision.models import ResNet50_Weights
 import torch.nn as nn
 import timm
 from torchvision import models
@@ -43,11 +44,12 @@ class ResNet50_order(nn.Module):
         self.expansion = 4
         self.out_channels = 512
 
-        # self.model_ft = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2) # 80.86, 25.6M
-        self.model_ft = models.resnet50(pretrained=True)
+        self.model_ft = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+        # pretrained=True) # 80.86, 25.6M
+        # self.model_ft = models.resnet50(pretrained=True)
 
         # overwrite the 'fc' layer
-        print("In features", self.model_ft.fc.in_features)
+        # print("In features", self.model_ft.fc.in_features)
         self.model_ft.fc = nn.Identity()  # Do nothing just pass input to output
 
         # At least one layer

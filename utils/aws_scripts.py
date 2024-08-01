@@ -66,7 +66,7 @@ def download_object(
     try:
         s3_client.download_file(bucket_name, key, download_path, Config=transfer_config)
 
-        path_df = get_datetime_from_string(os.path.basename(key))
+        path_df = get_datetime_from_string(os.path.basename(download_path))
 
         # If crops are saved, define the frequecy
         if intervals:
@@ -74,7 +74,7 @@ def download_object(
         else:
             save_crops = False
         if save_crops:
-            print(f"  - Saving crops for: {os.path.basename(key)}")
+            print(f" - Saving crops for: {os.path.basename(download_path)}")
 
         if perform_inference:
             perform_inf(
@@ -95,7 +95,9 @@ def download_object(
         if remove_image:
             os.remove(download_path)
     except Exception as e:
-        print(f"Error downloading {bucket_name}/{key}: {e}")
+        print(
+            f"\033[91m\033[1m Error downloading {bucket_name}/{key}: {e}\033[0m\033[0m"
+        )
 
 
 def get_datetime_from_string(input):
@@ -130,7 +132,6 @@ def download_batch(
     """
 
     existing_df = pd.read_csv(csv_file)
-    print(existing_df["image_path"])
 
     for key in keys:
         file_path, filename = os.path.split(key)
@@ -138,13 +139,12 @@ def download_batch(
         os.makedirs(os.path.join(local_path, file_path), exist_ok=True)
         download_path = os.path.join(local_path, file_path, filename)
 
-        print(download_path)
-        print(not rerun_existing)
-        print(download_path in existing_df["image_path"])
         # check if file is in csv_file 'path' column
         if not rerun_existing:
             if existing_df["image_path"].str.contains(download_path).any():
-                print(f"{download_path} has already been processed. Skipping...")
+                print(
+                    f"{os.path.basename(download_path)} has already been processed. Skipping..."
+                )
                 continue
 
         download_object(
