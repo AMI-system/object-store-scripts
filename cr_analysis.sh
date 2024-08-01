@@ -20,9 +20,7 @@ conda activate "${CONDA_ENV_PATH}"
 
 
 # Run the Python script on baskerville
-python s3_download_with_inference.py "Costa Rica" "All of the above"
-
-
-
-
-
+python s3_download_with_inference.py \
+  --country "Costa Rica" \
+  --deployment "Forest Edge - EC4AB109" \
+  --keep_crops

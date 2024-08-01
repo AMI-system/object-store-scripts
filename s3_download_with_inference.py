@@ -18,8 +18,15 @@ from utils.aws_scripts import get_objects, get_deployments
 from utils.custom_models import load_models
 
 
-def display_menu(
-    country, deployment, crops_interval, csv_file, rerun_existing, local_directory_path
+def download_and_inference(
+    country,
+    deployment,
+    crops_interval,
+    csv_file,
+    rerun_existing,
+    local_directory_path,
+    perform_inference,
+    remove_image,
 ):
     """
     Display the main menu and handle user interaction.
@@ -27,9 +34,6 @@ def display_menu(
 
     username = aws_credentials["UKCEH_username"]
     password = aws_credentials["UKCEH_password"]
-
-    perform_inference = True
-    remove_image = True
 
     print(f"\033[93m - Removing images after analysis: {remove_image}\033[0m")
     print(f"\033[93m - Performing inference: {perform_inference}\033[0m")
@@ -146,6 +150,18 @@ if __name__ == "__main__":
         help="Whether to keep the crops",
     )
     parser.add_argument(
+        "--perform_inference",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Whether to perform the inference",
+    )
+    parser.add_argument(
+        "--remove_image",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Whether to remove the raw image after inference",
+    )
+    parser.add_argument(
         "--crops_interval",
         type=str,
         help="The interval for which to preserve the crops",
@@ -213,11 +229,13 @@ if __name__ == "__main__":
         )
         all_boxes.to_csv(csv_file, index=False)
 
-    display_menu(
+    download_and_inference(
         args.country,
         args.deployment,
         crops_interval,
         csv_file,
         args.rerun_existing,
         data_storage_path,
+        args.perform_inference,
+        args.remove_image,
     )
