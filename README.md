@@ -37,3 +37,10 @@ To download interactively, and without inference and subsequent image deletion:
 ```bash
 python s3_download_async.py
 ```
+
+
+To save the crops following inference run:
+
+```
+python create_crops_only.py
+```
