@@ -79,6 +79,7 @@ def download_object(
         if perform_inference:
             perform_inf(
                 download_path,
+                bucket_name=bucket_name,
                 loc_model=localisation_model,
                 binary_model=binary_model,
                 order_model=order_model,

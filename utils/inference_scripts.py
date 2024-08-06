@@ -36,7 +36,8 @@ def classify_order(image_tensor, order_model, order_labels, order_data_threshold
 
     # print('Inference for order...')
     pred = order_model(image_tensor)
-    pred = torch.nn.functional.softmax(pred, dim=1)  # .cpu().numpy()[0]) * 100
+    pred = torch.nn.functional.softmax(pred, dim=1)
+    # .cpu().numpy()[0]) * 100
 
     predictions = pred.cpu().detach().numpy()
     predicted_label = np.argmax(predictions, axis=1)[0]
@@ -72,6 +73,7 @@ def classify_box(image_tensor, binary_model):
 
 def perform_inf(
     image_path,
+    bucket_name,
     loc_model,
     binary_model,
     order_model,
@@ -112,14 +114,17 @@ def perform_inf(
     image = Image.open(image_path).convert("RGB")
     original_image = image.copy()
     original_width, original_height = image.size
+
     # print('Inference for localisation...')
     input_tensor = transform_loc(image).unsqueeze(0).to(device)
 
     all_boxes = pd.DataFrame(
         columns=[
             "image_path",
+            "bucket_name",
             "analysis_datetime",
             "box_score",
+            "bix_label",
             "x_min",
             "y_min",
             "x_max",
@@ -137,18 +142,26 @@ def perform_inf(
     with torch.no_grad():
         localization_outputs = loc_model(input_tensor)
 
-        # print(image_path)
-        # print('Number of objects:', len(localization_outputs[0]['boxes']))
-
         # for each detection
         for i in range(len(localization_outputs[0]["boxes"])):
             x_min, y_min, x_max, y_max = localization_outputs[0]["boxes"][i]
             box_score = localization_outputs[0]["scores"].tolist()[i]
+            box_label = localization_outputs[0]["labels"].tolist()[i]
 
             x_min = int(int(x_min) * original_width / 300)
             y_min = int(int(y_min) * original_height / 300)
             x_max = int(int(x_max) * original_width / 300)
             y_max = int(int(y_max) * original_height / 300)
+
+            box_width = x_max - x_min
+            box_height = y_max - y_min
+
+            if box_score < 0.99:
+                continue
+
+            # if box height or width > half the image, skip
+            if box_width > original_width / 2 or box_height > original_height / 2:
+                continue
 
             # if save_crops then save the cropped image
             crop_path = ""
@@ -156,17 +169,6 @@ def perform_inf(
                 cropped_image = image.crop((x_min, y_min, x_max, y_max))
                 crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
                 cropped_image.save(crop_path)
-
-            box_width = x_max - x_min
-            box_height = y_max - y_min
-
-            # if box heigh or width > half the image, skip
-            if box_width > original_width / 2 or box_height > original_height / 2:
-                continue
-
-            # if confidence below threshold
-            if box_score <= 0.1:
-                continue
 
             # Crop the detected region and perform classification
             cropped_image = original_image.crop((x_min, y_min, x_max, y_max))
@@ -179,8 +181,6 @@ def perform_inf(
 
             # Annotate image with bounding box and class
             if class_name == "moth":
-                # Perform the species classification
-                # print('...Performing the inference')
                 species_name, species_confidence = classify_species(
                     cropped_tensor, regional_model, regional_category_map
                 )
@@ -210,8 +210,10 @@ def perform_inf(
                 [
                     [
                         image_path,
+                        bucket_name,
                         str(datetime.now()),
                         box_score,
+                        box_label,
                         x_min,
                         y_min,
                         x_max,
@@ -227,8 +229,10 @@ def perform_inf(
                 ],
                 columns=[
                     "image_path",
+                    "bucket_name",
                     "analysis_datetime",
                     "box_score",
+                    "box_label",
                     "x_min",
                     "y_min",
                     "x_max",
