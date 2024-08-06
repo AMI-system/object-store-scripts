@@ -168,6 +168,12 @@ if __name__ == "__main__":
         default=10,
     )
     parser.add_argument(
+        "--rerun_existing",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Whether to rerun images which have already been analysed",
+    )
+    parser.add_argument(
         "--data_storage_path",
         type=str,
         help="The path to scratch data storage",
@@ -178,12 +184,6 @@ if __name__ == "__main__":
         type=str,
         help="The path to the csv file to save the results",
         default=f'{parser.parse_args().data_storage_path}/{(parser.parse_args().country).replace(" ", "_")}_results.csv',
-    )
-    parser.add_argument(
-        "--rerun_existing",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Whether to rerun images which have already been analysed",
     )
 
     args = parser.parse_args()
@@ -204,7 +204,7 @@ if __name__ == "__main__":
         print("\033[93m - Not keeping crops\033[0m")
         crops_interval = None
 
-    print(f"\033[93m - Saving results to: {args.csv_file}\033[0m")
+    print(f"\033[93m - Saving results to: {os.path.abspath(args.csv_file)}\033[0m")
 
     # if the file doesnt exist, print headers
     csv_file = args.csv_file
@@ -212,8 +212,10 @@ if __name__ == "__main__":
         all_boxes = pd.DataFrame(
             columns=[
                 "image_path",
+                "bucket_name",
                 "analysis_datetime",
                 "box_score",
+                "box_label",
                 "x_min",
                 "y_min",
                 "x_max",

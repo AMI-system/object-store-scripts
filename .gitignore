@@ -6,9 +6,12 @@ __pycache__
 credentials.json
 outputs/
 data/
+crops/
 annotated_examples/
 .ipynb_checkpoints/
 
 *.out
 *.stats
 **/*.csv
+
+
