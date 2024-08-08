@@ -102,7 +102,8 @@ def download_object(
 
 
 def get_datetime_from_string(input):
-    dt = input.split("-")[1]
+    in_sting = input.replace("-snapshot.jpg", "")
+    dt = in_sting.split("-")[-1]
     dt = datetime.strptime(dt, "%Y%m%d%H%M%S")
     return dt
 
@@ -132,7 +133,7 @@ def download_batch(
     Download a batch of objects from S3.
     """
 
-    existing_df = pd.read_csv(csv_file)
+    existing_df = pd.read_csv(csv_file, dtype="unicode")
 
     for key in keys:
         file_path, filename = os.path.split(key)
