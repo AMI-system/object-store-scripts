@@ -16,7 +16,7 @@ def classify_species(image_tensor, regional_model, regional_category_map):
     # print('Inference for species...')
     output = regional_model(image_tensor)
     predictions = torch.nn.functional.softmax(output, dim=1)
-    predictions = predictions.detach().numpy()
+    predictions = predictions.cpu().detach().numpy()
     categories = predictions.argmax(axis=1)
 
     labels = regional_category_map
@@ -24,7 +24,7 @@ def classify_species(image_tensor, regional_model, regional_category_map):
     index_to_label = {index: label for label, index in labels.items()}
 
     label = [index_to_label[cat] for cat in categories][0]
-    score = 1 - predictions.max(axis=1).astype(float)[0]
+    score = predictions.max(axis=1).astype(float)[0]
     return label, score
 
 
@@ -37,9 +37,8 @@ def classify_order(image_tensor, order_model, order_labels, order_data_threshold
     # print('Inference for order...')
     pred = order_model(image_tensor)
     pred = torch.nn.functional.softmax(pred, dim=1)
-    # .cpu().numpy()[0]) * 100
-
     predictions = pred.cpu().detach().numpy()
+
     predicted_label = np.argmax(predictions, axis=1)[0]
     score = predictions.max(axis=1).astype(float)[0]
 
@@ -57,15 +56,12 @@ def classify_box(image_tensor, binary_model):
     output = binary_model(image_tensor)
 
     predictions = torch.nn.functional.softmax(output, dim=1)
-
-    predictions = predictions.detach().numpy()
-
+    predictions = predictions.cpu().detach().numpy()
     categories = predictions.argmax(axis=1)
 
     labels = {"moth": 0, "nonmoth": 1}
 
     index_to_label = {index: label for label, index in labels.items()}
-
     label = [index_to_label[cat] for cat in categories][0]
     score = predictions.max(axis=1).astype(float)[0]
     return label, score
