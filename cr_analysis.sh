@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --qos=turing
-#SBATCH --cpus-per-task=6
-#SBATCH --gres=gpu:1
-#SBATCH --mem=150G
-#SBATCH --output=cr_train.out
-#SBATCH --time=72:00:00          # total run time limit (DD-HH:MM:SS)
+#SBATCH --nodes 1
+#SBATCH --gpus 1
+#SBATCH --cpus-per-gpu 8
+#SBATCH --output=cr_train_gpu.out
+#SBATCH --time=48:00:00          # total run time limit (DD-HH:MM:SS)
 
 module purge; module load baskerville
 module load bask-apps/live
@@ -18,9 +18,7 @@ CONDA_ENV_PATH="/bask/projects/v/vjgo8416-amber/moth_detector_env/"
 # Activate the environment
 conda activate "${CONDA_ENV_PATH}"
 
-
 # Run the Python script on baskerville
 python s3_download_with_inference.py \
   --country "Costa Rica" \
-  --deployment "Forest Edge - EC4AB109" \
-  --keep_crops
+  --deployment "All"

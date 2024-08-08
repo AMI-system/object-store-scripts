@@ -22,7 +22,6 @@ def download_and_inference(
     country,
     deployment,
     crops_interval,
-    csv_file,
     rerun_existing,
     local_directory_path,
     perform_inference,
@@ -31,6 +30,25 @@ def download_and_inference(
     """
     Display the main menu and handle user interaction.
     """
+
+    output_cols = [
+        "image_path",
+        "bucket_name",
+        "analysis_datetime",
+        "box_score",
+        "box_label",
+        "x_min",
+        "y_min",
+        "x_max",
+        "y_max",
+        "class_name",
+        "class_confidence",
+        "order_name",
+        "order_confidence",
+        "species_name",
+        "species_confidence",
+        "cropped_image_path",
+    ]
 
     username = aws_credentials["UKCEH_username"]
     password = aws_credentials["UKCEH_password"]
@@ -59,8 +77,9 @@ def download_and_inference(
         deps = country_deployments
     else:
         deps = [deployment]
+
+    # loop through each deployment
     for region in deps:
-        print(f"\033[96m - Deployment: {region}\033[0m")
         location_name, camera_id = region.split(" - ")
         dep_id = [
             d["deployment_id"]
@@ -70,6 +89,18 @@ def download_and_inference(
             and d["camera_id"] == camera_id
             and d["status"] == "active"
         ][0]
+        print(f"\033[96m - Deployment: {region}, id: {dep_id} \033[0m")
+
+        # if the file doesnt exist, print headers
+        csv_file = os.path.abspath(
+            f"{local_directory_path}/{dep_id}/{dep_id}_results.csv"
+        )
+        os.makedirs(os.path.dirname(csv_file), exist_ok=True)
+        print(f"\033[93m - Saving results to: {csv_file}\033[0m")
+
+        if not os.path.isfile(csv_file):
+            all_boxes = pd.DataFrame(columns=output_cols)
+            all_boxes.to_csv(csv_file, index=False)
 
         prefix = f"{dep_id}/snapshot_images"
         get_objects(
@@ -179,12 +210,6 @@ if __name__ == "__main__":
         help="The path to scratch data storage",
         default="./data/",
     )
-    parser.add_argument(
-        "--csv_file",
-        type=str,
-        help="The path to the csv file to save the results",
-        default=f'{parser.parse_args().data_storage_path}/{(parser.parse_args().country).replace(" ", "_")}_results.csv',
-    )
 
     args = parser.parse_args()
 
@@ -204,38 +229,10 @@ if __name__ == "__main__":
         print("\033[93m - Not keeping crops\033[0m")
         crops_interval = None
 
-    print(f"\033[93m - Saving results to: {os.path.abspath(args.csv_file)}\033[0m")
-
-    # if the file doesnt exist, print headers
-    csv_file = args.csv_file
-    if not os.path.isfile(csv_file):
-        all_boxes = pd.DataFrame(
-            columns=[
-                "image_path",
-                "bucket_name",
-                "analysis_datetime",
-                "box_score",
-                "box_label",
-                "x_min",
-                "y_min",
-                "x_max",
-                "y_max",
-                "class_name",
-                "class_confidence",
-                "order_name",
-                "order_confidence",
-                "species_name",
-                "species_confidence",
-                "cropped_image_path",
-            ]
-        )
-        all_boxes.to_csv(csv_file, index=False)
-
     download_and_inference(
         args.country,
         args.deployment,
         crops_interval,
-        csv_file,
         args.rerun_existing,
         data_storage_path,
         args.perform_inference,

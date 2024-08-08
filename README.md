@@ -21,9 +21,10 @@ To run the script, use the following command:
 ```bash
 python s3_download_with_inference.py \
   --country "Costa Rica" \
-  --deployment "Forest Edge - EC4AB109" \
-  --keep_crops
+  --deployment "Forest Edge - EC4AB109"
 ```
+
+To run for all deployments use `--deployment "All"`
 
 Or to run on baskerville:
 
