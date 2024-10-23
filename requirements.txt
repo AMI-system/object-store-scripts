@@ -10,3 +10,17 @@ tqdm
 yaspin
 flake8-black
 pylint
+pre-commit
+boto3
+torch
+pandas
+argparse
+requests
+http-basic-auth
+tqdm
+datetime 
+torch
+torchvision
+timm
+pillow
+numpy

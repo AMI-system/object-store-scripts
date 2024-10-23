@@ -1,2 +1,97 @@
-# object-store-scripts
- 
+# Performing AMBER Inference on JASMIN
+
+This directory is designed to download images from Jasmin object store and perform inference to:
+- detect objects
+- classify objects as moth or non-moth
+- identify the order
+- determine the moth species
+
+## JASMIN Set-Up
+
+To use this pipeline on JASMIN you must have access to the following services: 
+- **Login Services**: jasmin-login. This provides access to the JASMIN shared services, i.e. login, transfer, scientific analysis servers, Jupyter notebook and LOTUS.
+- **Object Store**: ami-test-o. This is the data object store tenancy for the Automated Monitoring of Insects Trap.
+
+The [JASMIN documentation](https://help.jasmin.ac.uk/docs/getting-started/get-started-with-jasmin/) provides useful infomration on how to get set-up with these services. Including: 
+1. [Generate an SSH key](https://help.jasmin.ac.uk/docs/getting-started/generate-ssh-key-pair/)
+2. [Getting a JASMIN portal account](https://help.jasmin.ac.uk/docs/getting-started/get-jasmin-portal-account/)
+3. [Request “jasmin-login” access](https://help.jasmin.ac.uk/docs/getting-started/get-login-account/) (access to the shared JASMIN servers and the LOTUS batch cluster)
+
+
+## Conda Environment and Installation
+
+Once you have access to JASMIN, first create a conda environment and install packages: 
+
+```bash
+export PATH=$PATH:./.local/bin
+
+CONDA_ENV_PATH="./moth_detector_env/"
+conda create --yes --prefix "${CONDA_ENV_PATH}"
+conda install --yes python=3.9
+conda activate "${CONDA_ENV_PATH}"
+
+pip install -r ./inferences/requirements.txt
+```
+
+## Configs
+
+To use the inference scripts you will need to set up a `credentials.json` file containing: 
+
+```json
+{
+  "AWS_ACCESS_KEY_ID": `SECRET`,
+  "AWS_SECRET_ACCESS_KEY": `SECRET`,
+  "AWS_REGION": `SECRET`,
+  "AWS_URL_ENDPOINT": `SECRET`,
+  "UKCEH_username": `SECRET`,
+  "UKCEH_password": `SECRET`,
+  "directory": './inferences/data'
+}
+```
+
+Contact [Katriona Goldmann](kgoldmann@turing.ac.uk) for the AWS Access and UKCEH API configs. 
+
+## Usage
+
+Load the conda env:
+
+```bash
+conda activate moth_detector_env
+```
+
+Inferences are run by country and deployment site. To run the script, for Costa Rica say, use the following command:
+
+```bash
+python s3_download_with_inference.py \
+  --country "Costa Rica" \
+  --deployment "Forest Edge - EC4AB109"
+```
+
+To run for all deployments use `--deployment "All"`
+
+### Listing Available Deployments
+
+To find information about the available deployments you can use the print_deployments function. For all deployments: 
+
+```bash
+python print_deployments.py --include_inactive
+```
+
+or for Costa Rica and Panama only: 
+
+```bash
+python print_deployments.py \
+  --subset_countries 'Costa Rica' 'Panama'
+```
+
+For deployments of interest you can then run `s3_download_with_inference.py`, as above, where the `--deployment` argument is passed as the deployment key value. 
+
+## Running with slurm
+
+To run with slurm you need to be logged in on the [scientific nodes](https://help.jasmin.ac.uk/docs/interactive-computing/sci-servers/). 
+
+It is recommended you set up a shell script to runfor your country and deployment of interest. For example, `cr_analysis.sh` peformes inferences for Costa Rica's Garden - 3F1C4908 deployment. You can run this using: 
+
+```bash
+sbatch cr_analysis.sh
+```
