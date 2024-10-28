@@ -1,6 +1,6 @@
 aioboto3
 aiohttp
-asyncio
+mutirri::asyncio
 boto3
 nest_asyncio
 pathlib
@@ -11,14 +11,10 @@ yaspin
 flake8-black
 pylint
 pre-commit
-boto3
-torch
 pandas
-argparse
 requests
-http-basic-auth
-tqdm
-datetime 
+trentonoliphant::basicauth
+trentonoliphant::datetime
 torch
 torchvision
 timm

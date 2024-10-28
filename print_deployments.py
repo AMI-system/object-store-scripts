@@ -12,13 +12,36 @@ import boto3
 import os
 import argparse
 
-from utils.aws_scripts import get_deployments
+import requests
+from requests.auth import HTTPBasicAuth
+
+def get_deployments(username, password):
+    """Fetch deployments from the API with authentication."""
+
+    try:
+        url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
+        response = requests.get(
+            url, auth=HTTPBasicAuth(username, password), timeout=600
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        print(f"HTTP Error: {err}")
+        if response.status_code == 401:
+            print("Wrong username or password. Try again!")
+        sys.exit(1)
+    except Exception as err:
+        print(f"Error: {err}")
+        sys.exit(1)
 
 def print_deployments(include_inactive=False, subset_countries=None):
     """
     Provide the deployments available through the object store.
     """
+    import sys
+    print(sys.version)
 
+    
     # Get all deployments
     username = aws_credentials["UKCEH_username"]
     password = aws_credentials["UKCEH_password"]
@@ -37,13 +60,13 @@ def print_deployments(include_inactive=False, subset_countries=None):
         subset_countries = [x.title() for x in subset_countries]
         not_included_countries = [x for x in subset_countries if x not in all_countries]
         for missing in not_included_countries: 
-            print(f"\n\033[1m\N{warning sign} {missing} does not have any {act_string}deployments, check spelling\033[0m")
+            print(f"\033[1mWARNING: {missing} does not have any {act_string}deployments, check spelling\033[0m")
         all_countries = [x for x in all_countries if x in subset_countries]
 
     for country in all_countries:
         country_depl = [x for x in all_deployments if x['country'] == country]
         country_code = list(set([x['country_code'] for x in country_depl]))[0]    
-        print(f"\n\033[1m{country} ({country_code}) has {len(country_depl)} {act_string}deployments:\033[0m")
+        print("\n\033[1m" + country + " (" + country_code + ") has " + str(len(country_depl)) + act_string + "deployments:\033[0m")
         all_deps = list(set([x['deployment_id'] for x in country_depl]))
         
         for dep in sorted(all_deps):

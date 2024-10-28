@@ -20,17 +20,15 @@ The [JASMIN documentation](https://help.jasmin.ac.uk/docs/getting-started/get-st
 
 ## Conda Environment and Installation
 
-Once you have access to JASMIN, first create a conda environment and install packages: 
+Once you have access to JASMIN, you will need to [install miniforge](https://help.jasmin.ac.uk/docs/software-on-jasmin/creating-and-using-miniforge-environments/) to run condat. Then create a conda environment and install packages: 
 
 ```bash
-export PATH=$PATH:./.local/bin
-
 CONDA_ENV_PATH="./moth_detector_env/"
-conda create --yes --prefix "${CONDA_ENV_PATH}"
-conda install --yes python=3.9
+source ~/miniforge3/bin/activate
+conda create -p "${CONDA_ENV_PATH}" python=3.9
 conda activate "${CONDA_ENV_PATH}"
 
-pip install -r ./inferences/requirements.txt
+conda install --yes --file requirements.txt
 ```
 
 ## Configs
@@ -84,7 +82,13 @@ python print_deployments.py \
   --subset_countries 'Costa Rica' 'Panama'
 ```
 
-For deployments of interest you can then run `s3_download_with_inference.py`, as above, where the `--deployment` argument is passed as the deployment key value. 
+For deployments of interest you can then run `s3_download_with_inference.py`, as above, where the `--deployment` argument is passed as the deployment key value. e.g.: 
+
+```bash
+python s3_download_with_inference.py \
+  --country "Costa Rica" \
+  --deployment "Garden - 3F1C4908"
+```
 
 ## Running with slurm
 
@@ -95,3 +99,5 @@ It is recommended you set up a shell script to runfor your country and deploymen
 ```bash
 sbatch cr_analysis.sh
 ```
+
+Note to run slurm you will need to install miniforge on the scientific
