@@ -23,11 +23,12 @@ The [JASMIN documentation](https://help.jasmin.ac.uk/docs/getting-started/get-st
 Once you have access to JASMIN, you will need to [install miniforge](https://help.jasmin.ac.uk/docs/software-on-jasmin/creating-and-using-miniforge-environments/) to run condat. Then create a conda environment and install packages: 
 
 ```bash
-CONDA_ENV_PATH="./moth_detector_env/"
+CONDA_ENV_PATH="~/moth_detector_env/"
 source ~/miniforge3/bin/activate
-conda create -p "${CONDA_ENV_PATH}" python=3.9
+#conda create -p "${CONDA_ENV_PATH}" python=3.9
 conda activate "${CONDA_ENV_PATH}"
 
+conda install pytorch torchvision torchaudio cpuonly -c pytorch
 conda install --yes --file requirements.txt
 ```
 
@@ -100,4 +101,11 @@ It is recommended you set up a shell script to runfor your country and deploymen
 sbatch cr_analysis.sh
 ```
 
-Note to run slurm you will need to install miniforge on the scientific
+Note to run slurm you will need to install miniforge on the scientific nodes. 
+
+To check the slurm queue: 
+
+```bash
+squeue -u USERNAME
+```
+
