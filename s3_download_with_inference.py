@@ -146,17 +146,7 @@ if __name__ == "__main__":
             + "\N{Cross Mark}\033[0m\033[0m"
         )
 
-    print("\033[96m\033[1mLoading in models...\033[0m\033[0m", end="")
-    (
-        model_loc,
-        classification_model,
-        regional_model,
-        regional_category_map,
-        order_model,
-        order_data_thresholds,
-        order_labels,
-    ) = load_models(device)
-    print("\N{White Heavy Check Mark}")
+    
 
     print("\033[96m\033[1mInitialising the JASMINE session...\033[0m\033[0m", end="")
     # Load AWS credentials and S3 bucket name from config file
@@ -210,8 +200,58 @@ if __name__ == "__main__":
         help="The path to scratch data storage",
         default="./data/",
     )
+    parser.add_argument(
+        "--regional_model_path",
+        type=str,
+        help="The path to the regional models wights file",
+        default="./models/turing-costarica_v03_resnet50_2024-06-04-16-17_state.pt",
+    )
+    parser.add_argument(
+        "--regional_map_path",
+        type=str,
+        help="The path to the category map",
+        default="./models/03_costarica_data_category_map.json",
+    )
+    parser.add_argument(
+        "--binary_model_path",
+        type=str,
+        help="The path to the binary model weights",
+        default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth",
+    )
+    parser.add_argument(
+        "--order_model_path",
+        type=str,
+        help="The path to the binary model weights",
+        default="./models/dhc_best_128.pth",
+    )
+    parser.add_argument(
+        "--order_threshold_path",
+        type=str,
+        help="The path to the binary model weights",
+        default="./models/thresholdsTestTrain.csv",
+    )
+    parser.add_argument(
+        "--localisation_model_path",
+        type=str,
+        help="The path to the binary model weights",
+        default="./models/v1_localizmodel_2021-08-17-12-06.pt",
+    )
 
     args = parser.parse_args()
+
+    print("\033[96m\033[1mLoading in models...\033[0m\033[0m", end="")
+    (
+        model_loc,
+        classification_model,
+        regional_model,
+        regional_category_map,
+        order_model,
+        order_data_thresholds,
+        order_labels,
+    ) = load_models(device, args.lcoalisation_model_path, args.binary_model_path, args.order_model_path, args.order_threshold_path, args.regional_model_path, args.regional_map_path)
+    print("\N{White Heavy Check Mark}")
+    
+    
 
     # check that the data storage path exists
     data_storage_path = os.path.abspath(args.data_storage_path)

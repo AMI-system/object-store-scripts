@@ -72,10 +72,10 @@ class ResNet50_order(nn.Module):
         return level_1
 
 
-def load_models(device):
+def load_models(device, localisation_model_path, binary_model_path, order_model_path, order_threshold_path, regional_model_path, regional_map_path):
 
     # Load the localisation model
-    weights_path = "/home/users/katriona/inferences/models/v1_localizmodel_2021-08-17-12-06.pt"
+    weights_path = localisation_model_path
 
     model_loc = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=None)
     num_classes = 2  # 1 class (object) + background
@@ -92,7 +92,7 @@ def load_models(device):
     model_loc.eval()
 
     # Load the binary model
-    weights_path = "/home/users/katriona/inferences/models/moth-nonmoth-effv2b3_20220506_061527_30.pth"
+    weights_path = binary_model_path
     # labels_path = "/bask/homes/f/fspo1218/amber/data/mila_models/05-moth-nonmoth_category_map.json"
     num_classes = 2  # moth, non-moth
     classification_model = timm.create_model(
@@ -105,8 +105,8 @@ def load_models(device):
     classification_model.eval()
 
     # Load the order model
-    savedWeights = "/home/users/katriona/inferences/models/dhc_best_128.pth"
-    thresholdFile = "/home/users/katriona/inferences/models/thresholdsTestTrain.csv"
+    savedWeights = order_model_path
+    thresholdFile = order_threshold_path
     # img_size = 128
     order_data_thresholds = pd.read_csv(thresholdFile)
     order_labels = order_data_thresholds["ClassName"].to_list()
@@ -121,10 +121,10 @@ def load_models(device):
     model_order.eval()
 
     # Load the species classifier model
-    weights = "/home/users/katriona/inferences/models/turing-costarica_v03_resnet50_2024-06-04-16-17_state.pt"
+    weights = regional_weights_path
     species_category_map = json.load(
         open(
-            "/home/users/katriona/inferences/models/03_costarica_data_category_map.json"
+            regional_map_path
         )
     )
     num_classes = len(species_category_map)
