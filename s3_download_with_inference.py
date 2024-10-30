@@ -248,7 +248,7 @@ if __name__ == "__main__":
         order_model,
         order_data_thresholds,
         order_labels,
-    ) = load_models(device, args.lcoalisation_model_path, args.binary_model_path, args.order_model_path, args.order_threshold_path, args.regional_model_path, args.regional_map_path)
+    ) = load_models(device, args.localisation_model_path, args.binary_model_path, args.order_model_path, args.order_threshold_path, args.regional_model_path, args.regional_map_path)
     print("\N{White Heavy Check Mark}")
     
     

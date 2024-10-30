@@ -17,6 +17,18 @@ The [JASMIN documentation](https://help.jasmin.ac.uk/docs/getting-started/get-st
 2. [Getting a JASMIN portal account](https://help.jasmin.ac.uk/docs/getting-started/get-jasmin-portal-account/)
 3. [Request “jasmin-login” access](https://help.jasmin.ac.uk/docs/getting-started/get-login-account/) (access to the shared JASMIN servers and the LOTUS batch cluster)
 
+## Models
+
+You will need to add the models files to the ./models subdirectory. Following this you can pass in: 
+- regional_model_path: The path to the regional models wights file   
+- regional_map_path: The path to the category map 
+- binary_model_path: The path to the binary model weights 
+- order_model_path: The path to the binary model weights
+- order_threshold_path: The path to the binary model weights
+- localisation_model_path: The path to the binary model weights
+
+AMBER team members can find these files on OneDrive. Others can contact [Katriona Goldmann](kgoldmann@turing.ac.uk) for the model files. 
+
 
 ## Conda Environment and Installation
 
@@ -25,7 +37,7 @@ Once you have access to JASMIN, you will need to [install miniforge](https://hel
 ```bash
 CONDA_ENV_PATH="~/moth_detector_env/"
 source ~/miniforge3/bin/activate
-#conda create -p "${CONDA_ENV_PATH}" python=3.9
+conda create -p "${CONDA_ENV_PATH}" python=3.9
 conda activate "${CONDA_ENV_PATH}"
 
 conda install pytorch torchvision torchaudio cpuonly -c pytorch
@@ -55,7 +67,8 @@ Contact [Katriona Goldmann](kgoldmann@turing.ac.uk) for the AWS Access and UKCEH
 Load the conda env:
 
 ```bash
-conda activate moth_detector_env
+source ~/miniforge3/bin/activate
+conda activate "~/moth_detector_env/"
 ```
 
 Inferences are run by country and deployment site. To run the script, for Costa Rica say, use the following command:

@@ -121,7 +121,7 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
     model_order.eval()
 
     # Load the species classifier model
-    weights = regional_weights_path
+    weights = regional_model_path
     species_category_map = json.load(
         open(
             regional_map_path
