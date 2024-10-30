@@ -1,5 +1,6 @@
 #!/bin/bash
-#SBATCH --output=./logs/cr_garden2.out
+#SBATCH --output=./logs/singapore.out
+#SBATCH --time=24:00:00
 
 source ~/miniforge3/bin/activate
 
@@ -14,8 +15,9 @@ conda activate "${CONDA_ENV_PATH}"
 
 # Run the Inference script 
 python s3_download_with_inference.py \
-  --country "Costa Rica" \
-  --deployment "Garden - 3F1C4908"
-
-
+  --country "Singapore" \
+  --deployment "All" \
+  --crops_interval 10 \
+  --keep_crops \
+  --data_storage_path ./data/singapore
 

@@ -85,7 +85,7 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
             in_features, num_classes
         )
     )
-    checkpoint = torch.load(weights_path, map_location=device)
+    checkpoint = torch.load(weights_path, map_location=device, weights_only=True)
     state_dict = checkpoint.get("model_state_dict") or checkpoint
     model_loc.load_state_dict(state_dict)
     model_loc = model_loc.to(device)
@@ -93,13 +93,11 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
 
     # Load the binary model
     weights_path = binary_model_path
-    # labels_path = "/bask/homes/f/fspo1218/amber/data/mila_models/05-moth-nonmoth_category_map.json"
-    num_classes = 2  # moth, non-moth
     classification_model = timm.create_model(
         "tf_efficientnetv2_b3", num_classes=num_classes, weights=None
     )
     classification_model = classification_model.to(device)
-    checkpoint = torch.load(weights_path, map_location=device)
+    checkpoint = torch.load(weights_path, map_location=device, weights_only=True)
     state_dict = checkpoint.get("model_state_dict") or checkpoint
     classification_model.load_state_dict(state_dict)
     classification_model.eval()
@@ -107,16 +105,11 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
     # Load the order model
     savedWeights = order_model_path
     thresholdFile = order_threshold_path
-    # img_size = 128
     order_data_thresholds = pd.read_csv(thresholdFile)
     order_labels = order_data_thresholds["ClassName"].to_list()
-    # thresholds = data_thresholds["Threshold"].to_list()
-    # means = data_thresholds["Mean"].to_list()
-    # stds = data_thresholds["Std"].to_list()
-    # img_depth = 3
     num_classes = len(order_labels)
     model_order = ResNet50_order(num_classes=num_classes)
-    model_order.load_state_dict(torch.load(savedWeights, map_location=device))
+    model_order.load_state_dict(torch.load(savedWeights, map_location=device, weights_only=True))
     model_order = model_order.to(device)
     model_order.eval()
 
@@ -130,7 +123,7 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
     num_classes = len(species_category_map)
     species_model = Resnet50_species(num_classes=num_classes)
     species_model = species_model.to(device)
-    checkpoint = torch.load(weights, map_location=device)
+    checkpoint = torch.load(weights, map_location=device, weights_only=True)
     # The model state dict is nested in some checkpoints, and not in others
     state_dict = checkpoint.get("model_state_dict") or checkpoint
     species_model.load_state_dict(state_dict)

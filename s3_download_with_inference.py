@@ -261,7 +261,6 @@ if __name__ == "__main__":
     print("\033[93m\033[1m" + "Pipeline parameters" + "\033[0m\033[0m")
     print(f"\033[93m - Scratch and crops storage: {data_storage_path}\033[0m")
 
-    crops_interval = args.crops_interval
     if args.keep_crops:
         crops_interval = args.crops_interval
         print(f"\033[93m - Keeping crops every {crops_interval}mins\033[0m")
@@ -272,7 +271,7 @@ if __name__ == "__main__":
     download_and_inference(
         args.country,
         args.deployment,
-        crops_interval,
+        int(crops_interval),
         args.rerun_existing,
         data_storage_path,
         args.perform_inference,
