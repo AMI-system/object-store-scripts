@@ -182,10 +182,11 @@ def count_files(s3_client, bucket_name, prefix):
     first_page = ""
     last_page = ""
     for page in page_iterator:
-        if count == 0:
-            first_page = page.get("Contents", [])[0]["Key"]
-        count += page.get("KeyCount", 0)
-        last_page = page.get("Contents", [])[0]["Key"]
+        if not os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
+            if count == 0:
+                first_page = page.get("Contents", [])[0]["Key"]
+            count += page.get("KeyCount", 0)
+            last_page = page.get("Contents", [])[0]["Key"]
     return count, first_page, last_page
 
 
@@ -228,8 +229,8 @@ def get_objects(
     )
 
     if crops_interval is not None:
-        first_dt = get_datetime_from_string(first_dt)
-        last_dt = get_datetime_from_string(last_dt)
+        first_dt = get_datetime_from_string(os.path.basename(first_dt))
+        last_dt = get_datetime_from_string(os.path.basename(last_dt))
         t = first_dt
         intervals = []
         while t < last_dt:
@@ -240,6 +241,10 @@ def get_objects(
 
     keys = []
     for page in page_iterator:
+        if os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
+            print(f'{page.get("Contents", [])[0]["Key"]} is suspected corrupt, skipping')
+            continue
+        
         for obj in page.get("Contents", []):
             keys.append(obj["Key"])
 
