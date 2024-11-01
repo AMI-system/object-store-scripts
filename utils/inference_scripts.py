@@ -107,15 +107,7 @@ def perform_inf(
         ]
     )
 
-    image = Image.open(image_path).convert("RGB")
-    original_image = image.copy()
-    original_width, original_height = image.size
-
-    # print('Inference for localisation...')
-    input_tensor = transform_loc(image).unsqueeze(0).to(device)
-
-    all_boxes = pd.DataFrame(
-        columns=[
+    all_cols = [
             "image_path",
             "bucket_name",
             "analysis_datetime",
@@ -131,12 +123,56 @@ def perform_inf(
             "order_confidence",  # order info
             "species_name",
             "species_confidence",  # species info
+            "cropped_image_path",
         ]
+
+    image = Image.open(image_path).convert("RGB")
+    original_image = image.copy()
+    original_width, original_height = image.size
+
+    # print('Inference for localisation...')
+    input_tensor = transform_loc(image).unsqueeze(0).to(device)
+
+    all_boxes = pd.DataFrame(
+        columns=all_cols
     )
 
     # Perform object localization
     with torch.no_grad():
         localization_outputs = loc_model(input_tensor)
+
+        # catch no crops
+        if len(localization_outputs[0]["boxes"]) == 0:
+            df = pd.DataFrame(
+                [
+                    [
+                        image_path,
+                        bucket_name,
+                        str(datetime.now()),
+                        'None',
+                        'None',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                    ]
+                ],
+                columns=all_cols,
+            )
+            all_boxes = pd.concat([all_boxes, df])
+            df.to_csv(
+                f'{csv_file}',
+                mode="a",
+                header=False,
+                index=False,
+            )
 
         # for each detection
         for i in range(len(localization_outputs[0]["boxes"])):
@@ -161,10 +197,10 @@ def perform_inf(
 
             # if save_crops then save the cropped image
             crop_path = ""
-            if save_crops:
-                cropped_image = image.crop((x_min, y_min, x_max, y_max))
-                crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
-                cropped_image.save(crop_path)
+            # if save_crops: # temporarily saving all crops
+            cropped_image = image.crop((x_min, y_min, x_max, y_max))
+            crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
+            cropped_image.save(crop_path)
 
             # Crop the detected region and perform classification
             cropped_image = original_image.crop((x_min, y_min, x_max, y_max))
@@ -223,24 +259,7 @@ def perform_inf(
                         crop_path,
                     ]
                 ],
-                columns=[
-                    "image_path",
-                    "bucket_name",
-                    "analysis_datetime",
-                    "box_score",
-                    "box_label",
-                    "x_min",
-                    "y_min",
-                    "x_max",
-                    "y_max",
-                    "class_name",
-                    "class_confidence",
-                    "order_name",
-                    "order_confidence",
-                    "species_name",
-                    "species_confidence",
-                    "cropped_image_path",
-                ],
+                columns=all_cols,
             )
             all_boxes = pd.concat([all_boxes, df])
             df.to_csv(
