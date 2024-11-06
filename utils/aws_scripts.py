@@ -179,22 +179,20 @@ def count_files(s3_client, bucket_name, prefix):
     page_iterator = paginator.paginate(**operation_parameters)
 
     count = 0
-    first_page = ""
-    last_page = ""
+    all_keys = []
     for page in page_iterator:
         if not os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
-            if count == 0:
-                first_page = page.get("Contents", [])[0]["Key"]
             count += page.get("KeyCount", 0)
-            last_page = page.get("Contents", [])[0]["Key"]
-    return count, first_page, last_page
+            file_i = page.get("Contents", [])[0]["Key"]
+            all_keys = all_keys + [file_i]
+    return count, all_keys
 
 
 def get_objects(
     session,
     aws_credentials,
     bucket_name,
-    key,
+    prefix,
     local_path,
     batch_size=100,
     perform_inference=False,
@@ -218,10 +216,12 @@ def get_objects(
     """
     s3_client = session.client("s3", endpoint_url=aws_credentials["AWS_URL_ENDPOINT"])
 
-    total_files, first_dt, last_dt = count_files(s3_client, bucket_name, key)
+    total_files, all_keys = count_files(s3_client, bucket_name, prefix)
+    first_dt = get_datetime_from_string(os.path.basename(all_keys[0]))
+    last_dt = get_datetime_from_string(os.path.basename(all_keys[-1]))
 
     paginator = s3_client.get_paginator("list_objects_v2")
-    operation_parameters = {"Bucket": bucket_name, "Prefix": key}
+    operation_parameters = {"Bucket": bucket_name, "Prefix": prefix}
     page_iterator = paginator.paginate(**operation_parameters)
 
     progress_bar = tqdm.tqdm(
@@ -229,8 +229,6 @@ def get_objects(
     )
 
     if crops_interval is not None:
-        first_dt = get_datetime_from_string(os.path.basename(first_dt))
-        last_dt = get_datetime_from_string(os.path.basename(last_dt))
         t = first_dt
         intervals = []
         while t < last_dt:
