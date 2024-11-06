@@ -21,7 +21,7 @@ from utils.custom_models import load_models
 def download_and_inference(
     country,
     deployment,
-    crops_interval,
+    random_sample_size,
     rerun_existing,
     local_directory_path,
     perform_inference,
@@ -123,8 +123,7 @@ def download_and_inference(
             device=device,
             order_data_thresholds=order_data_thresholds,
             csv_file=csv_file,
-            rerun_existing=rerun_existing,
-            crops_interval=crops_interval,
+            rerun_existing=rerun_existing
         )
         print("\N{White Heavy Check Mark}\033[0m\033[0m")
 
@@ -183,9 +182,9 @@ if __name__ == "__main__":
         help="Whether to remove the raw image after inference",
     )
     parser.add_argument(
-        "--crops_interval",
+        "--random_sample_size",
         type=str,
-        help="The interval for which to preserve the crops",
+        help="The number of crops to analyse per night",
         default=10,
     )
     parser.add_argument(
@@ -261,17 +260,15 @@ if __name__ == "__main__":
     print("\033[93m\033[1m" + "Pipeline parameters" + "\033[0m\033[0m")
     print(f"\033[93m - Scratch and crops storage: {data_storage_path}\033[0m")
 
-    if args.keep_crops:
-        crops_interval = args.crops_interval
-        print(f"\033[93m - Keeping crops every {crops_interval}mins\033[0m")
-    else:
-        print("\033[93m - Not keeping crops\033[0m")
-        crops_interval = None
+    if args.random_sample_size:
+        random_sample_size = args.random_sample_size
+        print(f"\033[93m - Keeping {random_sample_size} images every night\033[0m")
+
 
     download_and_inference(
         args.country,
         args.deployment,
-        int(crops_interval),
+        int(random_sample_size),
         args.rerun_existing,
         data_storage_path,
         args.perform_inference,

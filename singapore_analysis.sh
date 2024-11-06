@@ -20,7 +20,7 @@ conda activate "${CONDA_ENV_PATH}"
 python s3_download_with_inference.py \
   --country "Singapore" \
   --deployment "All" \
-  --crops_interval 10 \
+  --random_sample_size 10 \
   --keep_crops \
   --data_storage_path ./data/singapore
 

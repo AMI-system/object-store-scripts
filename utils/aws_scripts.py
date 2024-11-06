@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from utils.inference_scripts import perform_inf
 import pandas as pd
 import sys
+import random
+
 
 
 def get_deployments(username, password):
@@ -48,8 +50,7 @@ def download_object(
     region="UKCEH",
     device=None,
     order_data_thresholds=None,
-    csv_file="results.csv",
-    intervals=None,
+    csv_file="results.csv"
 ):
     """
     Download a single object from S3 synchronously.
@@ -67,13 +68,13 @@ def download_object(
         s3_client.download_file(bucket_name, key, download_path, Config=transfer_config)
 
         # If crops are saved, define the frequecy
-        if intervals:
-            path_df = get_datetime_from_string(os.path.basename(download_path))
-            save_crops = path_df in intervals
-        else:
-            save_crops = False
-        if save_crops:
-            print(f" - Saving crops for: {os.path.basename(download_path)}")
+        # if intervals:
+        #     path_df = get_datetime_from_string(os.path.basename(download_path))
+        #     save_crops = path_df in intervals
+        #     save_crops = False
+        # if save_crops:
+        save_crops = True
+        print(f" - Saving crops for: {os.path.basename(download_path)}")
 
         if perform_inference:
             perform_inf(
@@ -125,8 +126,7 @@ def download_batch(
     device=None,
     order_data_thresholds=None,
     csv_file="results.csv",
-    rerun_existing=False,
-    intervals=None,
+    rerun_existing=False
 ):
     """
     Download a batch of objects from S3.
@@ -134,6 +134,8 @@ def download_batch(
 
     existing_df = pd.read_csv(csv_file, dtype="unicode")
 
+    random_keys = random.sample(range(0, len(keys)), 100)
+    
     for key in keys:
         file_path, filename = os.path.split(key)
 
@@ -165,8 +167,7 @@ def download_batch(
             region,
             device,
             order_data_thresholds,
-            csv_file,
-            intervals,
+            csv_file
         )
 
 
@@ -179,16 +180,13 @@ def count_files(s3_client, bucket_name, prefix):
     page_iterator = paginator.paginate(**operation_parameters)
 
     count = 0
-    first_page = ""
-    last_page = ""
+    all_keys = []
     for page in page_iterator:
         if not os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
-            if count == 0:
-                first_page = page.get("Contents", [])[0]["Key"]
             count += page.get("KeyCount", 0)
-            last_page = page.get("Contents", [])[0]["Key"]
-    return count, first_page, last_page
-
+            file_i = page.get("Contents", [])[0]["Key"]
+            all_keys = all_keys + [file_i]
+    return count, all_keys
 
 def get_objects(
     session,
@@ -211,15 +209,17 @@ def get_objects(
     order_data_thresholds=None,
     csv_file="results.csv",
     rerun_existing=False,
-    crops_interval=None,
+    random_sample_size=None,
 ):
     """
     Fetch objects from the S3 bucket and download them synchronously in batches.
     """
     s3_client = session.client("s3", endpoint_url=aws_credentials["AWS_URL_ENDPOINT"])
 
-    total_files, first_dt, last_dt = count_files(s3_client, bucket_name, key)
-
+    total_files, all_keys = count_files(s3_client, bucket_name, key)
+    first_dt = all_keys[0]
+    last_dt = all_keys[-1]
+    
     paginator = s3_client.get_paginator("list_objects_v2")
     operation_parameters = {"Bucket": bucket_name, "Prefix": key}
     page_iterator = paginator.paginate(**operation_parameters)
@@ -228,55 +228,60 @@ def get_objects(
         total=total_files, desc="Download files from server synchronously"
     )
 
-    if crops_interval is not None:
-        first_dt = get_datetime_from_string(os.path.basename(first_dt))
-        last_dt = get_datetime_from_string(os.path.basename(last_dt))
-        t = first_dt
-        intervals = []
-        while t < last_dt:
-            intervals = intervals + [t]
-            t = t + timedelta(minutes=crops_interval)
-    else:
-        intervals = None
+    # if crops_interval is not None:
+    #     first_dt = get_datetime_from_string(os.path.basename(first_dt))
+    #     last_dt = get_datetime_from_string(os.path.basename(last_dt))
+    #     t = first_dt
+    #     intervals = []
+    #     while t < last_dt:
+    #         intervals = intervals + [t]
+    #         t = t + timedelta(minutes=crops_interval)
+    # else:
+    #     intervals = None
 
-    keys = []
-    for page in page_iterator:
-        if os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
-            print(f'{page.get("Contents", [])[0]["Key"]} is suspected corrupt, skipping')
-            continue
-        
-        for obj in page.get("Contents", []):
-            keys.append(obj["Key"])
+    all_dates = list(set([get_datetime_from_string(os.path.basename(x)) for x in all_keys]))
 
-            if len(keys) >= batch_size:
-                download_batch(
-                    s3_client,
-                    bucket_name,
-                    keys,
-                    local_path,
-                    perform_inference,
-                    remove_image,
-                    localisation_model,
-                    binary_model,
-                    order_model,
-                    order_labels,
-                    species_model,
-                    species_labels,
-                    country,
-                    region,
-                    device,
-                    order_data_thresholds,
-                    csv_file,
-                    rerun_existing,
-                    intervals,
-                )
-                keys = []
-                progress_bar.update(batch_size)
-        if keys:
+    # get a random set of n images for each date
+    n = 10
+    subset_dates = []
+    for date in all_dates:
+        all_given_date = [x for x in all_keys if date.strftime('%Y%m%d') in x]
+        if n <= len(all_given_date): 
+            subset_given_date = [all_given_date[x] for x in random.sample(range(0, len(all_given_date)), n)]
+        else: 
+            subset_given_date = all_given_date
+        subset_dates = subset_dates + subset_given_date
+    
+    if len(subset_dates) >= batch_size:
+        download_batch(
+            s3_client,
+            bucket_name,
+            subset_dates, 
+            local_path,
+            perform_inference,
+            remove_image,
+            localisation_model,
+            binary_model,
+            order_model,
+            order_labels,
+            species_model,
+            species_labels,
+            country,
+            region,
+            device,
+            order_data_thresholds,
+            csv_file,
+            rerun_existing
+        )
+        subset_dates = []
+        progress_bar.update(batch_size)
+
+        # if subset_dates was not overwritten
+        if subset_dates:
             download_batch(
                 s3_client,
                 bucket_name,
-                keys,
+                subset_dates,
                 local_path,
                 perform_inference,
                 remove_image,
@@ -291,9 +296,8 @@ def get_objects(
                 device,
                 order_data_thresholds,
                 csv_file,
-                rerun_existing,
-                intervals,
+                rerun_existing
             )
-            progress_bar.update(len(keys))
+            progress_bar.update(len(subset_dates))
 
     progress_bar.close()

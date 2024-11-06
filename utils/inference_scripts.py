@@ -140,7 +140,6 @@ def perform_inf(
     # Perform object localization
     with torch.no_grad():
         localization_outputs = loc_model(input_tensor)
-        print(localization_outputs)
 
         # catch no crops
         if len(localization_outputs[0]["boxes"]) == 0:
@@ -152,17 +151,17 @@ def perform_inf(
                         str(datetime.now()),
                         'None',
                         'None',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
+                        'None',
+                        'None',
+                        'None',
+                        'None',
+                        'None',
+                        'None',
+                        'None',
+                        'None',
+                        'None',
+                        'None',
+                        'None',
                     ]
                 ],
                 columns=all_cols,
