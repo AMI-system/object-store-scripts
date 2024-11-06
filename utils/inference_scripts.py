@@ -140,6 +140,7 @@ def perform_inf(
     # Perform object localization
     with torch.no_grad():
         localization_outputs = loc_model(input_tensor)
+        print(localization_outputs)
 
         # catch no crops
         if len(localization_outputs[0]["boxes"]) == 0:
@@ -197,10 +198,10 @@ def perform_inf(
 
             # if save_crops then save the cropped image
             crop_path = ""
-            # if save_crops: # temporarily saving all crops
-            cropped_image = image.crop((x_min, y_min, x_max, y_max))
-            crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
-            cropped_image.save(crop_path)
+            if save_crops: 
+                cropped_image = image.crop((x_min, y_min, x_max, y_max))
+                crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
+                cropped_image.save(crop_path)
 
             # Crop the detected region and perform classification
             cropped_image = original_image.crop((x_min, y_min, x_max, y_max))

@@ -1,6 +1,9 @@
 #!/bin/bash
 #SBATCH --output=./logs/singapore.out
-#SBATCH --time=24:00:00
+#SBATCH --partition=par-single
+#SBATCH --time=47:30:00
+
+# see https://help.jasmin.ac.uk/docs/batch-computing/slurm-queues/ from slurm help
 
 source ~/miniforge3/bin/activate
 
@@ -11,7 +14,7 @@ CONDA_ENV_PATH="~/moth_detector_env/"
 conda activate "${CONDA_ENV_PATH}"
 
 # Print the Costa Rica deployments avaialble on the object store
-# python print_deployments.py --subset_countries 'Costa Rica'
+# python print_deployments.py --subset_countries 'Thailand'
 
 # Run the Inference script 
 python s3_download_with_inference.py \

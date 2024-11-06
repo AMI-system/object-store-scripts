@@ -27,7 +27,7 @@ You will need to add the models files to the ./models subdirectory. Following th
 - order_threshold_path: The path to the binary model weights
 - localisation_model_path: The path to the binary model weights
 
-AMBER team members can find these files on OneDrive. Others can contact [Katriona Goldmann](kgoldmann@turing.ac.uk) for the model files. 
+AMBER team members can find these files on [OneDrive](https://thealanturininstitute.sharepoint.com/:f:/r/sites/Automatedbiodiversitymonitoring/Shared%20Documents/General/Data/models/jasmin?csf=1&web=1&e=HgjhgA). Others can contact [Katriona Goldmann](kgoldmann@turing.ac.uk) for the model files. 
 
 
 ## Conda Environment and Installation
