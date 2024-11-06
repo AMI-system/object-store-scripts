@@ -43,10 +43,7 @@ def count_files(s3_client, bucket_name, prefix):
     page_iterator = paginator.paginate(**operation_parameters)
     count=0
     for page in page_iterator:
-        if not os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
-            count += page.get("KeyCount", 0)
-            file_i = page.get("Contents", [])[0]["Key"]
-            
+        count += page.get("KeyCount", 0)            
     return count
 
 def print_deployments(include_inactive=False, subset_countries=None, print_image_count=True):
@@ -55,7 +52,6 @@ def print_deployments(include_inactive=False, subset_countries=None, print_image
     """
     import sys
     print(sys.version)
-
     
     # Get all deployments
     username = aws_credentials["UKCEH_username"]
@@ -92,8 +88,7 @@ def print_deployments(include_inactive=False, subset_countries=None, print_image
         print("\n\033[1m" + country + " (" + country_code + ") has " + str(len(country_depl)) + act_string + "deployments:\033[0m")
         all_deps = list(set([x['deployment_id'] for x in country_depl]))
 
-        
-        
+        total_images = 0
         for dep in sorted(all_deps):
             dep_info = [x for x in country_depl if x['deployment_id'] == dep][0]
             print(f"\033[1m - Deployment ID: {dep_info['deployment_id']}, Name: {dep_info['location_name']}, Deployment Key: '{dep_info['location_name']} - {dep_info['camera_id']}'\033[0m")
@@ -102,10 +97,15 @@ def print_deployments(include_inactive=False, subset_countries=None, print_image
             # get the number of images for this deployment
             prefix = f"{dep_info['deployment_id']}/snapshot_images"
             bucket_name = dep_info["country_code"].lower()
-
+            
             if print_image_count:
                 count = count_files(s3_client, bucket_name, prefix)
+                total_images = total_images + count
                 print(f" - This deployment has \033[1m{count}\033[0m images.\n")
+
+
+        if print_image_count:
+            print(f"\033[1m - {country} has {total_images}\033[0m images total\033[0m\n")
 
     
 if __name__ == "__main__":
