@@ -218,7 +218,7 @@ def get_objects(
 
     total_files, all_keys = count_files(s3_client, bucket_name, prefix)
     first_dt = get_datetime_from_string(os.path.basename(all_keys[0]))
-    last_dt = get_datetime_from_string(os.path.basename(all_keys[-1]))
+    last_dt = get_datetime_from_string(os.path.basename(all_keys[-1]
 
     paginator = s3_client.get_paginator("list_objects_v2")
     operation_parameters = {"Bucket": bucket_name, "Prefix": prefix}
