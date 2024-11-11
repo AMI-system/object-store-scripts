@@ -209,7 +209,7 @@ def get_objects(
     order_data_thresholds=None,
     csv_file="results.csv",
     rerun_existing=False,
-    random_sample_size=None,
+    random_sample_size=10,
 ):
     """
     Fetch objects from the S3 bucket and download them synchronously in batches.
@@ -228,21 +228,10 @@ def get_objects(
         total=total_files, desc="Download files from server synchronously"
     )
 
-    # if crops_interval is not None:
-    #     first_dt = get_datetime_from_string(os.path.basename(first_dt))
-    #     last_dt = get_datetime_from_string(os.path.basename(last_dt))
-    #     t = first_dt
-    #     intervals = []
-    #     while t < last_dt:
-    #         intervals = intervals + [t]
-    #         t = t + timedelta(minutes=crops_interval)
-    # else:
-    #     intervals = None
-
     all_dates = list(set([get_datetime_from_string(os.path.basename(x)) for x in all_keys]))
 
     # get a random set of n images for each date
-    n = 10
+    n = random_sample_size
     subset_dates = []
     for date in all_dates:
         all_given_date = [x for x in all_keys if date.strftime('%Y%m%d') in x]
