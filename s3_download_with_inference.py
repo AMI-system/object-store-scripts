@@ -123,7 +123,7 @@ def download_and_inference(
             device=device,
             order_data_thresholds=order_data_thresholds,
             csv_file=csv_file,
-            rerun_existing=rerun_existing
+            rerun_existing=rerun_existing,
             random_sample_size=random_sample_size
         )
         print("\N{White Heavy Check Mark}\033[0m\033[0m")

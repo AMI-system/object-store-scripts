@@ -182,9 +182,10 @@ def count_files(s3_client, bucket_name, prefix):
     count = 0
     all_keys = []
     for page in page_iterator:
-        if not os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
-            count += page.get("KeyCount", 0)
-            file_i = page.get("Contents", [])[0]["Key"]
+        # if not os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
+        count += page.get("KeyCount", 0)
+        for obj in page.get("Contents", []):
+            file_i = obj["Key"]
             all_keys = all_keys + [file_i]
     return count, all_keys
 
@@ -217,30 +218,51 @@ def get_objects(
     s3_client = session.client("s3", endpoint_url=aws_credentials["AWS_URL_ENDPOINT"])
 
     total_files, all_keys = count_files(s3_client, bucket_name, key)
+    all_keys = list(set(all_keys))
     first_dt = all_keys[0]
     last_dt = all_keys[-1]
+
+    
     
     paginator = s3_client.get_paginator("list_objects_v2")
     operation_parameters = {"Bucket": bucket_name, "Prefix": key}
     page_iterator = paginator.paginate(**operation_parameters)
 
-    progress_bar = tqdm.tqdm(
-        total=total_files, desc="Download files from server synchronously"
-    )
+    
 
-    all_dates = list(set([get_datetime_from_string(os.path.basename(x)) for x in all_keys]))
+    all_dates = list(set([get_datetime_from_string(os.path.basename(x)).strftime('%Y%m%d') for x in all_keys]))
+    print(all_dates[0:10])
+    print(f'There are {len(all_dates)} nights of data')
 
     # get a random set of n images for each date
     n = random_sample_size
+
+    print(f'I am going to filter to {n} random images per night, where available: so {n*len(all_dates)} images max')
     subset_dates = []
     for date in all_dates:
-        all_given_date = [x for x in all_keys if date.strftime('%Y%m%d') in x]
+        all_given_date = [x for x in all_keys if date in x]
         if n <= len(all_given_date): 
             subset_given_date = [all_given_date[x] for x in random.sample(range(0, len(all_given_date)), n)]
         else: 
             subset_given_date = all_given_date
         subset_dates = subset_dates + subset_given_date
+    print(f'Subsetting complete. We are now analysing {len(subset_dates)} images.')
+
     
+
+    print('testA')
+    progress_bar = tqdm.tqdm(
+        total=len(subset_dates), desc="Download files from server and performing inference"
+    )
+    print('testB')
+
+    # master_keys = []
+    # for page in page_iterator:
+    #     for obj in page.get("Contents", []):
+    #         if obj["Key"] in subset_dates:
+    #             master_keys.append(obj["Key"])
+            
+            
     if len(subset_dates) >= batch_size:
         download_batch(
             s3_client,
@@ -265,28 +287,28 @@ def get_objects(
         subset_dates = []
         progress_bar.update(batch_size)
 
-        # if subset_dates was not overwritten
-        if subset_dates:
-            download_batch(
-                s3_client,
-                bucket_name,
-                subset_dates,
-                local_path,
-                perform_inference,
-                remove_image,
-                localisation_model,
-                binary_model,
-                order_model,
-                order_labels,
-                species_model,
-                species_labels,
-                country,
-                region,
-                device,
-                order_data_thresholds,
-                csv_file,
-                rerun_existing
-            )
-            progress_bar.update(len(subset_dates))
+    # if subset_dates was not overwritten
+    if subset_dates:
+        download_batch(
+            s3_client,
+            bucket_name,
+            master_keys,
+            local_path,
+            perform_inference,
+            remove_image,
+            localisation_model,
+            binary_model,
+            order_model,
+            order_labels,
+            species_model,
+            species_labels,
+            country,
+            region,
+            device,
+            order_data_thresholds,
+            csv_file,
+            rerun_existing
+        )
+        progress_bar.update(len(subset_dates))
 
     progress_bar.close()

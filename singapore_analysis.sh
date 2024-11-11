@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --output=./logs/singapore.out
 #SBATCH --partition=par-single
-#SBATCH --time=47:30:00
+#SBATCH --time=24:00:00
 
 # see https://help.jasmin.ac.uk/docs/batch-computing/slurm-queues/ from slurm help
 
@@ -17,6 +17,7 @@ conda activate "${CONDA_ENV_PATH}"
 # python print_deployments.py --subset_countries 'Thailand'
 
 # Run the Inference script 
+echo 'Running Inference'
 python s3_download_with_inference.py \
   --country "Singapore" \
   --deployment "All" \
