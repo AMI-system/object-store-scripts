@@ -182,11 +182,11 @@ def count_files(s3_client, bucket_name, prefix):
     count = 0
     all_keys = []
     for page in page_iterator:
-        # if not os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
-        count += page.get("KeyCount", 0)
-        for obj in page.get("Contents", []):
-            file_i = obj["Key"]
-            all_keys = all_keys + [file_i]
+        if not os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
+            count += page.get("KeyCount", 0)
+            for obj in page.get("Contents", []):
+                file_i = obj["Key"]
+                all_keys = all_keys + [file_i]
     return count, all_keys
 
 def get_objects(

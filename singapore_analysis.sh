@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --output=./logs/singapore.out
+#SBATCH --output=./logs/singapore2.out
 #SBATCH --partition=par-single
 #SBATCH --time=24:00:00
 
@@ -18,10 +18,5 @@ conda activate "${CONDA_ENV_PATH}"
 
 # Run the Inference script 
 echo 'Running Inference'
-python s3_download_with_inference.py \
-  --country "Singapore" \
-  --deployment "All" \
-  --random_sample_size 10 \
-  --keep_crops \
-  --data_storage_path ./data/singapore
+python s3_download_with_inference.py --country "Singapore" --deployment "RCHG - 34F0B1E9" --random_sample_size 10 --keep_crops --data_storage_path ./data/singapore
 
