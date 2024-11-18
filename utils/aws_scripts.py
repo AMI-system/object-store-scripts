@@ -42,8 +42,6 @@ def download_object(
     binary_model=None,
     order_model=None,
     order_labels=None,
-    species_model=None,
-    species_labels=None,
     country="UK",
     region="UKCEH",
     device=None,
@@ -83,8 +81,6 @@ def download_object(
                 binary_model=binary_model,
                 order_model=order_model,
                 order_labels=order_labels,
-                regional_model=species_model,
-                regional_category_map=species_labels,
                 country=country,
                 region=region,
                 device=device,
@@ -118,8 +114,6 @@ def download_batch(
     binary_model=None,
     order_model=None,
     order_labels=None,
-    species_model=None,
-    species_labels=None,
     country="UK",
     region="UKCEH",
     device=None,
@@ -159,8 +153,6 @@ def download_batch(
             binary_model,
             order_model,
             order_labels,
-            species_model,
-            species_labels,
             country,
             region,
             device,
@@ -201,8 +193,6 @@ def get_objects(
     binary_model=None,
     order_model=None,
     order_labels=None,
-    species_model=None,
-    species_labels=None,
     country="UK",
     region="UKCEH",
     device=None,
@@ -218,7 +208,7 @@ def get_objects(
 
     total_files, all_keys = count_files(s3_client, bucket_name, prefix)
     first_dt = get_datetime_from_string(os.path.basename(all_keys[0]))
-    last_dt = get_datetime_from_string(os.path.basename(all_keys[-1]
+    last_dt = get_datetime_from_string(os.path.basename(all_keys[-1]))
 
     paginator = s3_client.get_paginator("list_objects_v2")
     operation_parameters = {"Bucket": bucket_name, "Prefix": prefix}
@@ -258,8 +248,6 @@ def get_objects(
                     binary_model,
                     order_model,
                     order_labels,
-                    species_model,
-                    species_labels,
                     country,
                     region,
                     device,
@@ -282,8 +270,6 @@ def get_objects(
                 binary_model,
                 order_model,
                 order_labels,
-                species_model,
-                species_labels,
                 country,
                 region,
                 device,

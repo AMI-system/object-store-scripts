@@ -5,28 +5,6 @@ import torchvision.transforms as transforms
 import numpy as np
 from datetime import datetime
 
-# from utils.custom_models import Resnet50_species, ResNet50_order, load_models
-
-
-def classify_species(image_tensor, regional_model, regional_category_map):
-    """
-    Classify the species of the moth using the regional model.
-    """
-
-    # print('Inference for species...')
-    output = regional_model(image_tensor)
-    predictions = torch.nn.functional.softmax(output, dim=1)
-    predictions = predictions.cpu().detach().numpy()
-    categories = predictions.argmax(axis=1)
-
-    labels = regional_category_map
-
-    index_to_label = {index: label for label, index in labels.items()}
-
-    label = [index_to_label[cat] for cat in categories][0]
-    score = predictions.max(axis=1).astype(float)[0]
-    return label, score
-
 
 def classify_order(image_tensor, order_model, order_labels, order_data_thresholds):
     """
@@ -74,8 +52,6 @@ def perform_inf(
     binary_model,
     order_model,
     order_labels,
-    regional_model,
-    regional_category_map,
     country,
     region,
     device,
@@ -88,7 +64,6 @@ def perform_inf(
       - object detection
       - object classification
       - order classification
-      - species classification
     """
 
     transform_loc = transforms.Compose(
@@ -121,8 +96,6 @@ def perform_inf(
             "class_confidence",  # binary class info
             "order_name",
             "order_confidence",  # order info
-            "species_name",
-            "species_confidence",  # species info
             "cropped_image_path",
         ]
 
@@ -151,8 +124,6 @@ def perform_inf(
                         str(datetime.now()),
                         'None',
                         'None',
-                        '',
-                        '',
                         '',
                         '',
                         '',
@@ -211,31 +182,6 @@ def perform_inf(
                 cropped_tensor, order_model, order_labels, order_data_thresholds
             )
 
-            # Annotate image with bounding box and class
-            if class_name == "moth":
-                species_name, species_confidence = classify_species(
-                    cropped_tensor, regional_model, regional_category_map
-                )
-
-                draw = ImageDraw.Draw(original_image)
-                draw.rectangle([x_min, y_min, x_max, y_max], outline="green", width=3)
-                draw.text(
-                    (x_min, y_min - 10),
-                    species_name + " , %.3f " % species_confidence,
-                    fill="green",
-                )
-
-            else:
-                species_name, species_confidence = None, None
-                draw = ImageDraw.Draw(original_image)
-                draw.rectangle([x_min, y_min, x_max, y_max], outline="red", width=3)
-                draw.text(
-                    (x_min, y_min - 10),
-                    f"order: {order_name}, binary: {class_name}",
-                    fill="red",
-                )
-
-            draw.text((x_min, y_max), str(box_score), fill="black")
 
             # append to csv with pandas
             df = pd.DataFrame(
@@ -254,8 +200,6 @@ def perform_inf(
                         class_confidence,
                         order_name,
                         order_confidence,
-                        species_name,
-                        species_confidence,
                         crop_path,
                     ]
                 ],
