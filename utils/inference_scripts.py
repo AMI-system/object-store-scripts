@@ -165,14 +165,7 @@ def perform_inf(
             # if box height or width > half the image, skip
             if box_width > original_width / 2 or box_height > original_height / 2:
                 continue
-
-            # if save_crops then save the cropped image
-            crop_path = ""
-            if save_crops: 
-                cropped_image = image.crop((x_min, y_min, x_max, y_max))
-                crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
-                cropped_image.save(crop_path)
-
+           
             # Crop the detected region and perform classification
             cropped_image = original_image.crop((x_min, y_min, x_max, y_max))
             cropped_tensor = transform_species(cropped_image).unsqueeze(0).to(device)
@@ -182,38 +175,42 @@ def perform_inf(
                 cropped_tensor, order_model, order_labels, order_data_thresholds
             )
 
+            # if save_crops then save the cropped image
+            crop_path = ""
+            if order_name == "Coleoptera": 
+                
+                if save_crops: 
+                    crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
+                    cropped_image.save(crop_path)
 
-            # append to csv with pandas
-            df = pd.DataFrame(
-                [
+                print(f"Potential beetle: {crop_path}")
+                # append to csv with pandas
+                df = pd.DataFrame(
                     [
-                        image_path,
-                        bucket_name,
-                        str(datetime.now()),
-                        box_score,
-                        box_label,
-                        x_min,
-                        y_min,
-                        x_max,
-                        y_max,
-                        class_name,
-                        class_confidence,
-                        order_name,
-                        order_confidence,
-                        crop_path,
-                    ]
-                ],
-                columns=all_cols,
-            )
-            all_boxes = pd.concat([all_boxes, df])
-            df.to_csv(
-                f'{csv_file}',
-                mode="a",
-                header=False,
-                index=False,
-            )
+                        [
+                            image_path,
+                            bucket_name,
+                            str(datetime.now()),
+                            box_score,
+                            box_label,
+                            x_min,
+                            y_min,
+                            x_max,
+                            y_max,
+                            class_name,
+                            class_confidence,
+                            order_name,
+                            order_confidence,
+                            crop_path,
+                        ]
+                    ],
+                    columns=all_cols,
+                )
+                all_boxes = pd.concat([all_boxes, df])
+                df.to_csv(
+                    f'{csv_file}',
+                    mode="a",
+                    header=False,
+                    index=False,
+                )
 
-        # Save the annotated image
-        # if (all_boxes['class_name'] == 'moth').any():
-        #     print('...Moth Detected')
-        #     original_image.save(os.path.basename(image_path))

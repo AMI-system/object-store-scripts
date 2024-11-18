@@ -47,7 +47,6 @@ def download_object(
     device=None,
     order_data_thresholds=None,
     csv_file="results.csv",
-    intervals=None,
 ):
     """
     Download a single object from S3 synchronously.
@@ -65,13 +64,9 @@ def download_object(
         s3_client.download_file(bucket_name, key, download_path, Config=transfer_config)
 
         # If crops are saved, define the frequecy
-        if intervals:
-            path_df = get_datetime_from_string(os.path.basename(download_path))
-            save_crops = path_df in intervals
-        else:
-            save_crops = False
-        if save_crops:
-            print(f" - Saving crops for: {os.path.basename(download_path)}")
+        
+        save_crops = True
+        print(f" - Saving crops for: {os.path.basename(download_path)}")
 
         if perform_inference:
             perform_inf(
@@ -120,7 +115,6 @@ def download_batch(
     order_data_thresholds=None,
     csv_file="results.csv",
     rerun_existing=False,
-    intervals=None,
 ):
     """
     Download a batch of objects from S3.
@@ -158,7 +152,6 @@ def download_batch(
             device,
             order_data_thresholds,
             csv_file,
-            intervals,
         )
 
 
@@ -199,7 +192,6 @@ def get_objects(
     order_data_thresholds=None,
     csv_file="results.csv",
     rerun_existing=False,
-    crops_interval=None,
 ):
     """
     Fetch objects from the S3 bucket and download them synchronously in batches.
@@ -218,14 +210,6 @@ def get_objects(
         total=total_files, desc="Download files from server synchronously"
     )
 
-    if crops_interval is not None:
-        t = first_dt
-        intervals = []
-        while t < last_dt:
-            intervals = intervals + [t]
-            t = t + timedelta(minutes=crops_interval)
-    else:
-        intervals = None
 
     keys = []
     for page in page_iterator:
@@ -254,7 +238,6 @@ def get_objects(
                     order_data_thresholds,
                     csv_file,
                     rerun_existing,
-                    intervals,
                 )
                 keys = []
                 progress_bar.update(batch_size)
@@ -276,7 +259,6 @@ def get_objects(
                 order_data_thresholds,
                 csv_file,
                 rerun_existing,
-                intervals,
             )
             progress_bar.update(len(keys))
 
