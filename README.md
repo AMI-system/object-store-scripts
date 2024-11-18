@@ -35,7 +35,7 @@ AMBER team members can find these files on [OneDrive](https://thealanturininstit
 Once you have access to JASMIN, you will need to [install miniforge](https://help.jasmin.ac.uk/docs/software-on-jasmin/creating-and-using-miniforge-environments/) to run condat. Then create a conda environment and install packages: 
 
 ```bash
-CONDA_ENV_PATH="~/moth_detector_env/"
+CONDA_ENV_PATH="~/conda_envs/moth_detector_env/"
 source ~/miniforge3/bin/activate
 conda create -p "${CONDA_ENV_PATH}" python=3.9
 conda activate "${CONDA_ENV_PATH}"
@@ -68,7 +68,7 @@ Load the conda env:
 
 ```bash
 source ~/miniforge3/bin/activate
-conda activate "~/moth_detector_env/"
+conda activate "~/conda_envs/moth_detector_env/"
 ```
 
 Inferences are run by country and deployment site. To run the script, for Costa Rica say, use the following command:
