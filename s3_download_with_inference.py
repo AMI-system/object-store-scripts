@@ -262,7 +262,7 @@ if __name__ == "__main__":
     print(f"\033[93m - Scratch and crops storage: {data_storage_path}\033[0m")
 
     if args.keep_crops:
-        crops_interval = args.crops_interval
+        crops_interval = int(args.crops_interval)
         print(f"\033[93m - Keeping crops every {crops_interval}mins\033[0m")
     else:
         print("\033[93m - Not keeping crops\033[0m")
@@ -271,7 +271,7 @@ if __name__ == "__main__":
     download_and_inference(
         args.country,
         args.deployment,
-        int(crops_interval),
+        crops_interval,
         args.rerun_existing,
         data_storage_path,
         args.perform_inference,
