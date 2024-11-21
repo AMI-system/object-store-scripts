@@ -137,7 +137,8 @@ def perform_inf(
                 ],
                 columns=all_cols,
             )
-            all_boxes = pd.concat([all_boxes, df])
+            if not df.empty:
+                all_boxes = pd.concat([all_boxes, df])
             df.to_csv(
                 f'{csv_file}',
                 mode="a",
@@ -177,40 +178,42 @@ def perform_inf(
 
             # if save_crops then save the cropped image
             crop_path = ""
-            if order_name == "Coleoptera": 
+            if order_name == "Coleoptera" or order_name == 'Heteroptera' or order_name == 'Hemiptera': 
                 
                 if save_crops: 
                     crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
                     cropped_image.save(crop_path)
 
                 print(f"Potential beetle: {crop_path}")
-                # append to csv with pandas
-                df = pd.DataFrame(
+            
+            # append to csv with pandas
+            df = pd.DataFrame(
+                [
                     [
-                        [
-                            image_path,
-                            bucket_name,
-                            str(datetime.now()),
-                            box_score,
-                            box_label,
-                            x_min,
-                            y_min,
-                            x_max,
-                            y_max,
-                            class_name,
-                            class_confidence,
-                            order_name,
-                            order_confidence,
-                            crop_path,
-                        ]
-                    ],
-                    columns=all_cols,
-                )
+                        image_path,
+                        bucket_name,
+                        str(datetime.now()),
+                        box_score,
+                        box_label,
+                        x_min,
+                        y_min,
+                        x_max,
+                        y_max,
+                        class_name,
+                        class_confidence,
+                        order_name,
+                        order_confidence,
+                        crop_path,
+                    ]
+                ],
+                columns=all_cols,
+            )
+            if not df.empty:
                 all_boxes = pd.concat([all_boxes, df])
-                df.to_csv(
-                    f'{csv_file}',
-                    mode="a",
-                    header=False,
-                    index=False,
-                )
+            df.to_csv(
+                f'{csv_file}',
+                mode="a",
+                header=False,
+                index=False,
+            )
 
