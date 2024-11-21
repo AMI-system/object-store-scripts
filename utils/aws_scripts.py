@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from utils.inference_scripts import perform_inf
 import pandas as pd
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def get_deployments(username, password):
@@ -263,3 +264,130 @@ def get_objects(
             progress_bar.update(len(keys))
 
     progress_bar.close()
+
+def download_batch_multithreaded(
+    s3_client,
+    bucket_name,
+    keys,
+    local_path,
+    perform_inference=False,
+    remove_image=False,
+    localisation_model=None,
+    binary_model=None,
+    order_model=None,
+    order_labels=None,
+    country="UK",
+    region="UKCEH",
+    device=None,
+    order_data_thresholds=None,
+    csv_file="results.csv",
+    rerun_existing=False,
+    max_workers=10,  # Define the maximum number of threads
+):
+    """
+    Download a batch of objects from S3 using multithreading.
+    """
+    existing_df = pd.read_csv(csv_file, dtype="unicode")
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Create a thread-safe progress bar
+        progress_bar = tqdm.tqdm(total=len(keys), desc="Downloading Files", unit="file")
+        
+        futures = []
+        for key in keys:
+            file_path, filename = os.path.split(key)
+            os.makedirs(os.path.join(local_path, file_path), exist_ok=True)
+            download_path = os.path.join(local_path, file_path, filename)
+            
+            # Check if the file has already been processed
+            if not rerun_existing and existing_df["image_path"].str.contains(download_path).any():
+                print(f"{os.path.basename(download_path)} already processed. Skipping...")
+                progress_bar.update(1)
+                continue
+            
+            # Submit each download task to the thread pool
+            futures.append(
+                executor.submit(
+                    download_object,
+                    s3_client,
+                    bucket_name,
+                    key,
+                    download_path,
+                    perform_inference,
+                    remove_image,
+                    localisation_model,
+                    binary_model,
+                    order_model,
+                    order_labels,
+                    country,
+                    region,
+                    device,
+                    order_data_thresholds,
+                    csv_file,
+                )
+            )
+        
+        # Handle task completion and progress bar updates
+        for future in as_completed(futures):
+            try:
+                future.result()  # Raise any exceptions from the thread
+            except Exception as e:
+                print(f"Error in threaded download: {e}")
+            finally:
+                progress_bar.update(1)
+        
+        progress_bar.close()
+
+
+# Modify `get_objects` to call the multithreaded batch downloader
+def get_objects_multithreaded(
+    session,
+    aws_credentials,
+    bucket_name,
+    prefix,
+    local_path,
+    batch_size=100,
+    perform_inference=False,
+    remove_image=False,
+    localisation_model=None,
+    binary_model=None,
+    order_model=None,
+    order_labels=None,
+    country="UK",
+    region="UKCEH",
+    device=None,
+    order_data_thresholds=None,
+    csv_file="results.csv",
+    rerun_existing=False,
+    max_workers=10,  # Number of threads
+):
+    """
+    Fetch objects from the S3 bucket and download them in batches using multithreading.
+    """
+    s3_client = session.client("s3", endpoint_url=aws_credentials["AWS_URL_ENDPOINT"])
+    total_files, all_keys = count_files(s3_client, bucket_name, prefix)
+    
+    print(f"Found {total_files} files to download.")
+
+    # Download files in batches
+    for i in range(0, len(all_keys), batch_size):
+        keys_batch = all_keys[i:i+batch_size]
+        download_batch_multithreaded(
+            s3_client,
+            bucket_name,
+            keys_batch,
+            local_path,
+            perform_inference,
+            remove_image,
+            localisation_model,
+            binary_model,
+            order_model,
+            order_labels,
+            country,
+            region,
+            device,
+            order_data_thresholds,
+            csv_file,
+            rerun_existing,
+            max_workers,
+        )

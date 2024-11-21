@@ -14,7 +14,7 @@ import pandas as pd
 import os
 import argparse
 
-from utils.aws_scripts import get_objects, get_deployments
+from utils.aws_scripts import get_objects, get_objects_multithreaded, get_deployments
 from utils.custom_models import load_models
 
 
@@ -25,6 +25,7 @@ def download_and_inference(
     local_directory_path,
     perform_inference,
     remove_image,
+    num_workers,
 ):
     """
     Display the main menu and handle user interaction.
@@ -100,7 +101,7 @@ def download_and_inference(
             all_boxes.to_csv(csv_file, index=False)
 
         prefix = f"{dep_id}/snapshot_images"
-        get_objects(
+        get_objects_multithreaded(
             session,
             aws_credentials,
             s3_bucket_name,
@@ -119,6 +120,7 @@ def download_and_inference(
             order_data_thresholds=order_data_thresholds,
             csv_file=csv_file,
             rerun_existing=rerun_existing,
+            max_workers=num_workers,
         )
         print("\N{White Heavy Check Mark}\033[0m\033[0m")
 
@@ -149,7 +151,10 @@ if __name__ == "__main__":
         aws_secret_access_key=aws_credentials["AWS_SECRET_ACCESS_KEY"],
         region_name=aws_credentials["AWS_REGION"],
     )
+    
     print("\N{White Heavy Check Mark}")
+
+    num_workers = int(os.getenv("SLURM_CPUS_PER_TASK", os.cpu_count()))
 
     parser = argparse.ArgumentParser(
         description="Script for downloading and processing images from S3."
@@ -210,6 +215,12 @@ if __name__ == "__main__":
         help="The path to the binary model weights",
         default="./models/v1_localizmodel_2021-08-17-12-06.pt",
     )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=num_workers,  
+        help="Number of workers for multi-threaded downloads",
+    )
 
     args = parser.parse_args()
 
@@ -231,6 +242,8 @@ if __name__ == "__main__":
     print("\033[93m\033[1m" + "Pipeline parameters" + "\033[0m\033[0m")
     print(f"\033[93m - Scratch and crops storage: {data_storage_path}\033[0m")
 
+    print(f"\033[93m - Number of workers: {args.num_workers}\033[0m")
+
     download_and_inference(
         args.country,
         args.deployment,
@@ -238,4 +251,5 @@ if __name__ == "__main__":
         data_storage_path,
         args.perform_inference,
         args.remove_image,
+        args.num_workers,
     )

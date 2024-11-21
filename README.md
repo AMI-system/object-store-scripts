@@ -111,7 +111,7 @@ To run with slurm you need to be logged in on the [scientific nodes](https://hel
 It is recommended you set up a shell script to runfor your country and deployment of interest. For example, `cr_analysis.sh` peformes inferences for Costa Rica's Garden - 3F1C4908 deployment. You can run this using: 
 
 ```bash
-sbatch cr_analysis.sh
+sbatch harlequin_costarica.sh
 ```
 
 Note to run slurm you will need to install miniforge on the scientific nodes. 
