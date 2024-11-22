@@ -5,6 +5,8 @@ import torchvision.transforms as transforms
 import numpy as np
 from datetime import datetime
 
+# ignore the pandas Future Warning
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def classify_order(image_tensor, order_model, order_labels, order_data_thresholds):
     """
@@ -23,7 +25,6 @@ def classify_order(image_tensor, order_model, order_labels, order_data_threshold
     label = order_labels[predicted_label]
 
     return label, score
-
 
 def classify_box(image_tensor, binary_model):
     """
@@ -210,6 +211,7 @@ def perform_inf(
             )
             if not df.empty:
                 all_boxes = pd.concat([all_boxes, df])
+
             df.to_csv(
                 f'{csv_file}',
                 mode="a",

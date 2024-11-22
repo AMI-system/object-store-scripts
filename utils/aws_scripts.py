@@ -9,8 +9,11 @@ from datetime import datetime, timedelta
 from utils.inference_scripts import perform_inf
 import pandas as pd
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
+import multiprocessing
+import tqdm
+import math
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor
 
 def get_deployments(username, password):
     """Fetch deployments from the API with authentication."""
@@ -137,6 +140,7 @@ def download_batch(
                 )
                 continue
 
+        print(key)
         download_object(
             s3_client,
             bucket_name,
@@ -173,7 +177,6 @@ def count_files(s3_client, bucket_name, prefix):
             all_keys = all_keys + [file_i]
     return count, all_keys
 
-
 def get_objects(
     session,
     aws_credentials,
@@ -193,60 +196,44 @@ def get_objects(
     order_data_thresholds=None,
     csv_file="results.csv",
     rerun_existing=False,
+    num_workers=1,
 ):
     """
-    Fetch objects from the S3 bucket and download them synchronously in batches.
+    Fetch objects from the S3 bucket and download them synchronously or using threads.
     """
     s3_client = session.client("s3", endpoint_url=aws_credentials["AWS_URL_ENDPOINT"])
 
     total_files, all_keys = count_files(s3_client, bucket_name, prefix)
-    first_dt = get_datetime_from_string(os.path.basename(all_keys[0]))
-    last_dt = get_datetime_from_string(os.path.basename(all_keys[-1]))
 
     paginator = s3_client.get_paginator("list_objects_v2")
     operation_parameters = {"Bucket": bucket_name, "Prefix": prefix}
     page_iterator = paginator.paginate(**operation_parameters)
-
-    progress_bar = tqdm.tqdm(
-        total=total_files, desc="Download files from server synchronously"
-    )
-
 
     keys = []
     for page in page_iterator:
         if os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
             print(f'{page.get("Contents", [])[0]["Key"]} is suspected corrupt, skipping')
             continue
-        
+
         for obj in page.get("Contents", []):
             keys.append(obj["Key"])
 
-            if len(keys) >= batch_size:
-                download_batch(
-                    s3_client,
-                    bucket_name,
-                    keys,
-                    local_path,
-                    perform_inference,
-                    remove_image,
-                    localisation_model,
-                    binary_model,
-                    order_model,
-                    order_labels,
-                    country,
-                    region,
-                    device,
-                    order_data_thresholds,
-                    csv_file,
-                    rerun_existing,
-                )
-                keys = []
-                progress_bar.update(batch_size)
-        if keys:
+    # Divide the keys among workers
+    chunks = [
+        keys[i : i + math.ceil(len(keys) / num_workers)]
+        for i in range(0, len(keys), math.ceil(len(keys) / num_workers))
+    ]
+
+    # Shared progress bar
+    progress_bar = tqdm.tqdm(total=total_files, desc="Download files")
+
+    def process_chunk(chunk):
+        for i in range(0, len(chunk), batch_size):
+            batch_keys = chunk[i : i + batch_size]
             download_batch(
                 s3_client,
                 bucket_name,
-                keys,
+                batch_keys,
                 local_path,
                 perform_inference,
                 remove_image,
@@ -261,133 +248,10 @@ def get_objects(
                 csv_file,
                 rerun_existing,
             )
-            progress_bar.update(len(keys))
+            progress_bar.update(len(batch_keys))
+
+    # Use ThreadPoolExecutor instead of multiprocessing
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        executor.map(process_chunk, chunks)
 
     progress_bar.close()
-
-def download_batch_multithreaded(
-    s3_client,
-    bucket_name,
-    keys,
-    local_path,
-    perform_inference=False,
-    remove_image=False,
-    localisation_model=None,
-    binary_model=None,
-    order_model=None,
-    order_labels=None,
-    country="UK",
-    region="UKCEH",
-    device=None,
-    order_data_thresholds=None,
-    csv_file="results.csv",
-    rerun_existing=False,
-    max_workers=10,  # Define the maximum number of threads
-):
-    """
-    Download a batch of objects from S3 using multithreading.
-    """
-    existing_df = pd.read_csv(csv_file, dtype="unicode")
-    
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Create a thread-safe progress bar
-        progress_bar = tqdm.tqdm(total=len(keys), desc="Downloading Files", unit="file")
-        
-        futures = []
-        for key in keys:
-            file_path, filename = os.path.split(key)
-            os.makedirs(os.path.join(local_path, file_path), exist_ok=True)
-            download_path = os.path.join(local_path, file_path, filename)
-            
-            # Check if the file has already been processed
-            if not rerun_existing and existing_df["image_path"].str.contains(download_path).any():
-                print(f"{os.path.basename(download_path)} already processed. Skipping...")
-                progress_bar.update(1)
-                continue
-            
-            # Submit each download task to the thread pool
-            futures.append(
-                executor.submit(
-                    download_object,
-                    s3_client,
-                    bucket_name,
-                    key,
-                    download_path,
-                    perform_inference,
-                    remove_image,
-                    localisation_model,
-                    binary_model,
-                    order_model,
-                    order_labels,
-                    country,
-                    region,
-                    device,
-                    order_data_thresholds,
-                    csv_file,
-                )
-            )
-        
-        # Handle task completion and progress bar updates
-        for future in as_completed(futures):
-            try:
-                future.result()  # Raise any exceptions from the thread
-            except Exception as e:
-                print(f"Error in threaded download: {e}")
-            finally:
-                progress_bar.update(1)
-        
-        progress_bar.close()
-
-
-# Modify `get_objects` to call the multithreaded batch downloader
-def get_objects_multithreaded(
-    session,
-    aws_credentials,
-    bucket_name,
-    prefix,
-    local_path,
-    batch_size=100,
-    perform_inference=False,
-    remove_image=False,
-    localisation_model=None,
-    binary_model=None,
-    order_model=None,
-    order_labels=None,
-    country="UK",
-    region="UKCEH",
-    device=None,
-    order_data_thresholds=None,
-    csv_file="results.csv",
-    rerun_existing=False,
-    max_workers=10,  # Number of threads
-):
-    """
-    Fetch objects from the S3 bucket and download them in batches using multithreading.
-    """
-    s3_client = session.client("s3", endpoint_url=aws_credentials["AWS_URL_ENDPOINT"])
-    total_files, all_keys = count_files(s3_client, bucket_name, prefix)
-    
-    print(f"Found {total_files} files to download.")
-
-    # Download files in batches
-    for i in range(0, len(all_keys), batch_size):
-        keys_batch = all_keys[i:i+batch_size]
-        download_batch_multithreaded(
-            s3_client,
-            bucket_name,
-            keys_batch,
-            local_path,
-            perform_inference,
-            remove_image,
-            localisation_model,
-            binary_model,
-            order_model,
-            order_labels,
-            country,
-            region,
-            device,
-            order_data_thresholds,
-            csv_file,
-            rerun_existing,
-            max_workers,
-        )

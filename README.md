@@ -76,7 +76,8 @@ Inferences are run by country and deployment site. To run the script, for Costa 
 python s3_download_with_inference.py \
   --country "Costa Rica" \
   --deployment "Forest Edge - EC4AB109" \
-  --data_storage_path "./data/harlequin/"
+  --data_storage_path "./data/harlequin/CostaRica" \
+  --num_workers 1
 ```
 
 To run for all deployments use `--deployment "All"`

@@ -14,7 +14,7 @@ import pandas as pd
 import os
 import argparse
 
-from utils.aws_scripts import get_objects, get_objects_multithreaded, get_deployments
+from utils.aws_scripts import get_objects, get_deployments
 from utils.custom_models import load_models
 
 
@@ -101,7 +101,7 @@ def download_and_inference(
             all_boxes.to_csv(csv_file, index=False)
 
         prefix = f"{dep_id}/snapshot_images"
-        get_objects_multithreaded(
+        get_objects(
             session,
             aws_credentials,
             s3_bucket_name,
@@ -120,7 +120,7 @@ def download_and_inference(
             order_data_thresholds=order_data_thresholds,
             csv_file=csv_file,
             rerun_existing=rerun_existing,
-            max_workers=num_workers,
+            num_workers=num_workers,
         )
         print("\N{White Heavy Check Mark}\033[0m\033[0m")
 
