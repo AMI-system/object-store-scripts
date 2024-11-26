@@ -14,6 +14,8 @@ import tqdm
 import math
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
+import re
+
 
 def get_deployments(username, password):
     """Fetch deployments from the API with authentication."""
@@ -218,6 +220,11 @@ def get_objects(
         for obj in page.get("Contents", []):
             keys.append(obj["Key"])
 
+    # don't rerun previously analysed images
+    results_df = pd.read_csv(csv_file, dtype=str)
+    run_images = [re.sub(r'^.*?dep', 'dep', x) for x in results_df['image_path']]
+    keys = [x for x in keys if x not in run_images]
+    
     # Divide the keys among workers
     chunks = [
         keys[i : i + math.ceil(len(keys) / num_workers)]
@@ -225,7 +232,7 @@ def get_objects(
     ]
 
     # Shared progress bar
-    progress_bar = tqdm.tqdm(total=total_files, desc="Download files")
+    progress_bar = tqdm.tqdm(total=total_files, desc=f"Download files for {os.path.basename(csv_file).replace('_results.csv', '')}")
 
     def process_chunk(chunk):
         for i in range(0, len(chunk), batch_size):
