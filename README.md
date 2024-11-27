@@ -68,7 +68,7 @@ Load the conda env:
 
 ```bash
 source ~/miniforge3/bin/activate
-conda activate "~/moth_detector_env/"
+conda activate "~/conda_envs/moth_detector_env/"
 ```
 
 Inferences are run by country and deployment site. To run the script, for Costa Rica say, use the following command:
@@ -103,6 +103,13 @@ python s3_download_with_inference.py \
   --country "Costa Rica" \
   --deployment "Garden - 3F1C4908"
 ```
+
+### Generating the Keys
+
+```bash
+python 02_generate_keys.py --bucket 'cri' --prefix '' --output_file s3_keys.txt
+```
+
 
 ## Running with slurm
 

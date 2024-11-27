@@ -92,7 +92,7 @@ def print_deployments(include_inactive=False, subset_countries=None, print_image
         for dep in sorted(all_deps):
             dep_info = [x for x in country_depl if x['deployment_id'] == dep][0]
             print(f"\033[1m - Deployment ID: {dep_info['deployment_id']}, Name: {dep_info['location_name']}, Deployment Key: '{dep_info['location_name']} - {dep_info['camera_id']}'\033[0m")
-            print(f"   Location ID: {dep_info['location_id']}, Latitute: {dep_info['lat']}, Longitute: {dep_info['lon']}, Camera ID: {dep_info['camera_id']}, System ID: {dep_info['system_id']}, Status: {dep_info['status']}")
+            print(f"   Location ID: {dep_info['location_id']}, Country code: {dep_info['country_code'].lower()}, Latitute: {dep_info['lat']}, Longitute: {dep_info['lon']}, Camera ID: {dep_info['camera_id']}, System ID: {dep_info['system_id']}, Status: {dep_info['status']}")
 
             # get the number of images for this deployment
             prefix = f"{dep_info['deployment_id']}/snapshot_images"
