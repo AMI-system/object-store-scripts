@@ -91,7 +91,12 @@ def display_menu():
         print("Invalid directory. Please try again.")
 
     directory_path = pathlib.Path(directory_path)
-    files = list(directory_path.rglob(f"*{extension}"))
+
+    # Fix to exclude recycle bin
+    files = [
+        file for file in directory_path.rglob(f"*{extension}")
+        if "$RECYCLE.BIN" not in str(file) and ".Trashes" not in str(file)
+    ]
 
     print("\nReview Your Input")
     print("=================\n")
