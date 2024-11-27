@@ -9,6 +9,11 @@ from datetime import datetime, timedelta
 from utils.inference_scripts import perform_inf
 import pandas as pd
 import sys
+import tqdm
+import math
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor
+import re
 
 
 def get_deployments(username, password):
@@ -210,6 +215,7 @@ def get_objects(
     csv_file="results.csv",
     rerun_existing=False,
     crops_interval=None,
+    num_workers=1,
 ):
     """
     Fetch objects from the S3 bucket and download them synchronously in batches.
@@ -223,10 +229,6 @@ def get_objects(
     paginator = s3_client.get_paginator("list_objects_v2")
     operation_parameters = {"Bucket": bucket_name, "Prefix": prefix}
     page_iterator = paginator.paginate(**operation_parameters)
-
-    progress_bar = tqdm.tqdm(
-        total=total_files, desc="Download files from server synchronously"
-    )
 
     if crops_interval is not None:
         t = first_dt
@@ -242,39 +244,31 @@ def get_objects(
         if os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
             print(f'{page.get("Contents", [])[0]["Key"]} is suspected corrupt, skipping')
             continue
-        
+
         for obj in page.get("Contents", []):
             keys.append(obj["Key"])
 
-            if len(keys) >= batch_size:
-                download_batch(
-                    s3_client,
-                    bucket_name,
-                    keys,
-                    local_path,
-                    perform_inference,
-                    remove_image,
-                    localisation_model,
-                    binary_model,
-                    order_model,
-                    order_labels,
-                    species_model,
-                    species_labels,
-                    country,
-                    region,
-                    device,
-                    order_data_thresholds,
-                    csv_file,
-                    rerun_existing,
-                    intervals,
-                )
-                keys = []
-                progress_bar.update(batch_size)
-        if keys:
+    # don't rerun previously analysed images
+    results_df = pd.read_csv(csv_file, dtype=str)
+    run_images = [re.sub(r'^.*?dep', 'dep', x) for x in results_df['image_path']]
+    keys = [x for x in keys if x not in run_images]
+    
+    # Divide the keys among workers
+    chunks = [
+        keys[i : i + math.ceil(len(keys) / num_workers)]
+        for i in range(0, len(keys), math.ceil(len(keys) / num_workers))
+    ]
+
+    # Shared progress bar
+    progress_bar = tqdm.tqdm(total=total_files, desc=f"Download files for {os.path.basename(csv_file).replace('_results.csv', '')}")
+
+    def process_chunk(chunk):
+        for i in range(0, len(chunk), batch_size):
+            batch_keys = chunk[i : i + batch_size]
             download_batch(
                 s3_client,
                 bucket_name,
-                keys,
+                batch_keys,
                 local_path,
                 perform_inference,
                 remove_image,
@@ -282,16 +276,17 @@ def get_objects(
                 binary_model,
                 order_model,
                 order_labels,
-                species_model,
-                species_labels,
                 country,
                 region,
                 device,
                 order_data_thresholds,
                 csv_file,
                 rerun_existing,
-                intervals,
             )
-            progress_bar.update(len(keys))
+            progress_bar.update(len(batch_keys))
+
+    # Use ThreadPoolExecutor instead of multiprocessing
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        executor.map(process_chunk, chunks)
 
     progress_bar.close()

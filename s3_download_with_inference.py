@@ -159,6 +159,8 @@ if __name__ == "__main__":
     )
     print("\N{White Heavy Check Mark}")
 
+    num_workers = int(os.getenv("SLURM_CPUS_PER_TASK", os.cpu_count()))
+
     parser = argparse.ArgumentParser(
         description="Script for downloading and processing images from S3."
     )
@@ -236,6 +238,12 @@ if __name__ == "__main__":
         help="The path to the binary model weights",
         default="./models/v1_localizmodel_2021-08-17-12-06.pt",
     )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=num_workers,  
+        help="Number of workers for multi-threaded downloads",
+    )
 
     args = parser.parse_args()
 
@@ -268,6 +276,8 @@ if __name__ == "__main__":
         print("\033[93m - Not keeping crops\033[0m")
         crops_interval = None
 
+        print(f"\033[93m - Number of workers: {args.num_workers}\033[0m")
+
     download_and_inference(
         args.country,
         args.deployment,
@@ -276,4 +286,5 @@ if __name__ == "__main__":
         data_storage_path,
         args.perform_inference,
         args.remove_image,
+        args.num_workers,
     )
