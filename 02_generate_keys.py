@@ -2,7 +2,7 @@ import boto3
 import argparse
 import json
 
-def list_s3_keys(bucket_name, prefix=""):
+def list_s3_keys(bucket_name, deployment_id=""):
     """
     List all keys in an S3 bucket under a specific prefix.
     
@@ -30,7 +30,7 @@ def list_s3_keys(bucket_name, prefix=""):
     while True:
         list_kwargs = {
             "Bucket": bucket_name,
-            "Prefix": prefix,
+            "Prefix": deployment_id,
         }
         if continuation_token:
             list_kwargs["ContinuationToken"] = continuation_token
@@ -64,15 +64,15 @@ def save_keys_to_file(keys, output_file):
 def main():
     parser = argparse.ArgumentParser(description="Generate a file containing S3 keys from a bucket.")
     parser.add_argument("--bucket", type=str, required=True, help="Name of the S3 bucket.")
-    parser.add_argument("--prefix", type=str, default="", help="Prefix to filter objects (default: '')")
+    parser.add_argument("--deployment_id", type=str, default="", help="The deployment id to filter objects. If set to '' then all deployments are used. (default: '')")
     parser.add_argument("--output_file", type=str, default="s3_keys.txt", help="Output file to save S3 keys.")
     args = parser.parse_args()
 
     
 
     # List keys from the specified S3 bucket and prefix
-    print(f"Listing keys from bucket '{args.bucket}' with prefix '{args.prefix}'...")
-    keys = list_s3_keys(args.bucket, args.prefix)
+    print(f"Listing keys from bucket '{args.bucket}' with deployment '{args.deployment_id}'...")
+    keys = list_s3_keys(args.bucket, args.deployment_id)
 
     # Save keys to the output file
     save_keys_to_file(keys, args.output_file)

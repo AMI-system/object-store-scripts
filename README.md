@@ -71,7 +71,7 @@ source ~/miniforge3/bin/activate
 conda activate "~/conda_envs/moth_detector_env/"
 ```
 
-Inferences are run by country and deployment site. To run the script, for Costa Rica say, use the following command:
+<!-- Inferences are run by country and deployment site. To run the script, for Costa Rica say, use the following command:
 
 ```bash
 python s3_download_with_inference.py \
@@ -79,9 +79,16 @@ python s3_download_with_inference.py \
   --deployment "Forest Edge - EC4AB109"
 ```
 
-To run for all deployments use `--deployment "All"`
+To run for all deployments use `--deployment "All"` -->
 
-### Listing Available Deployments
+The multi-core pipeline is run in several steps: 
+
+1. Listing All Available Deployments
+2. Generate Key Files
+3. Chop the keys into chunks
+4. Analyse the chunks
+
+### 01. Listing Available Deployments
 
 To find information about the available deployments you can use the print_deployments function. For all deployments: 
 
@@ -104,10 +111,29 @@ python s3_download_with_inference.py \
   --deployment "Garden - 3F1C4908"
 ```
 
-### Generating the Keys
+### 02. Generating the Keys
 
 ```bash
-python 02_generate_keys.py --bucket 'cri' --prefix '' --output_file s3_keys.txt
+python 02_generate_keys.py --bucket 'cri' --deployment_id 'dep000031' --output_file './keys/dep000031_keys.txt'
+```
+
+### 03. Pre-chop the Keys into Chunks
+
+```bash
+python 03_pre_chop_files.py --input_file './keys/dep000031_keys.txt' --file_extension 'jpg|jpeg' --chunk_size 100 --output_file './keys/dep000031_workload_chunks.json'
+```
+
+### 04. Process the Chunked Files
+
+```bash
+python 04_process_chunks.py \
+  --chunk_id 1 \
+  --json_file './keys/dep000031_workload_chunks.json' \
+  --output_dir './data/dep000031' \
+  --bucket_name 'cri' \
+  --credentials_file './credentials.json' \
+  --perform_inference \
+  --remove_image
 ```
 
 

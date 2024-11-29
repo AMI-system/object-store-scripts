@@ -129,12 +129,12 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
     species_model.load_state_dict(state_dict)
     species_model.eval()
 
-    return (
-        model_loc,
-        classification_model,
-        species_model,
-        species_category_map,
-        model_order,
-        order_data_thresholds,
-        order_labels,
-    )
+    return ({
+        'localisation_model': model_loc,
+        'classification_model': classification_model,
+        'species_model': species_model,
+        'species_model_labels': species_category_map,
+        'order_model': model_order,
+        'order_model_thresholds': order_data_thresholds,
+        'order_model_labels': order_labels
+    })

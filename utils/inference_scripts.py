@@ -5,9 +5,6 @@ import torchvision.transforms as transforms
 import numpy as np
 from datetime import datetime
 
-# from utils.custom_models import Resnet50_species, ResNet50_order, load_models
-
-
 def classify_species(image_tensor, regional_model, regional_category_map):
     """
     Classify the species of the moth using the regional model.
@@ -76,12 +73,11 @@ def perform_inf(
     order_labels,
     regional_model,
     regional_category_map,
-    country,
-    region,
     device,
     order_data_thresholds,
     csv_file,
     save_crops,
+    box_threshold=0.99
 ):
     """
     Perform inferences on an image including:
@@ -126,6 +122,7 @@ def perform_inf(
             "cropped_image_path",
         ]
 
+
     image = Image.open(image_path).convert("RGB")
     original_image = image.copy()
     original_width, original_height = image.size
@@ -137,12 +134,12 @@ def perform_inf(
         columns=all_cols
     )
 
-    # Perform object localization
+    # Perform object localisation
     with torch.no_grad():
-        localization_outputs = loc_model(input_tensor)
-
+        localisation_outputs = loc_model(input_tensor)
+        
         # catch no crops
-        if len(localization_outputs[0]["boxes"]) == 0:
+        if len(localisation_outputs[0]["boxes"]) == 0 or all(localisation_outputs[0]["scores"] < box_threshold):
             df = pd.DataFrame(
                 [
                     [
@@ -175,11 +172,11 @@ def perform_inf(
             )
 
         # for each detection
-        for i in range(len(localization_outputs[0]["boxes"])):
-            x_min, y_min, x_max, y_max = localization_outputs[0]["boxes"][i]
-            box_score = localization_outputs[0]["scores"].tolist()[i]
-            box_label = localization_outputs[0]["labels"].tolist()[i]
-
+        for i in range(len(localisation_outputs[0]["boxes"])):
+            x_min, y_min, x_max, y_max = localisation_outputs[0]["boxes"][i]
+            box_score = localisation_outputs[0]["scores"].tolist()[i]
+            box_label = localisation_outputs[0]["labels"].tolist()[i]
+            
             x_min = int(int(x_min) * original_width / 300)
             y_min = int(int(y_min) * original_height / 300)
             x_max = int(int(x_max) * original_width / 300)
@@ -188,7 +185,7 @@ def perform_inf(
             box_width = x_max - x_min
             box_height = y_max - y_min
 
-            if box_score < 0.99:
+            if box_score < box_threshold:
                 continue
 
             # if box height or width > half the image, skip
@@ -234,7 +231,6 @@ def perform_inf(
                     f"order: {order_name}, binary: {class_name}",
                     fill="red",
                 )
-
             draw.text((x_min, y_max), str(box_score), fill="black")
 
             # append to csv with pandas
@@ -261,7 +257,9 @@ def perform_inf(
                 ],
                 columns=all_cols,
             )
+        
             all_boxes = pd.concat([all_boxes, df])
+            
             df.to_csv(
                 f'{csv_file}',
                 mode="a",
