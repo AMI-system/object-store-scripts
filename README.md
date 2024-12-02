@@ -4,7 +4,8 @@ This directory is designed to download images from Jasmin object store and perfo
 - detect objects
 - classify objects as moth or non-moth
 - identify the order
-- determine the moth species
+
+This branch is designed to save crops of beetles. 
 
 ## JASMIN Set-Up
 
@@ -20,8 +21,6 @@ The [JASMIN documentation](https://help.jasmin.ac.uk/docs/getting-started/get-st
 ## Models
 
 You will need to add the models files to the ./models subdirectory. Following this you can pass in: 
-- regional_model_path: The path to the regional models wights file   
-- regional_map_path: The path to the category map 
 - binary_model_path: The path to the binary model weights 
 - order_model_path: The path to the binary model weights
 - order_threshold_path: The path to the binary model weights
@@ -35,7 +34,7 @@ AMBER team members can find these files on [OneDrive](https://thealanturininstit
 Once you have access to JASMIN, you will need to [install miniforge](https://help.jasmin.ac.uk/docs/software-on-jasmin/creating-and-using-miniforge-environments/) to run condat. Then create a conda environment and install packages: 
 
 ```bash
-CONDA_ENV_PATH="~/moth_detector_env/"
+CONDA_ENV_PATH="~/conda_envs/moth_detector_env/"
 source ~/miniforge3/bin/activate
 conda create -p "${CONDA_ENV_PATH}" python=3.9
 conda activate "${CONDA_ENV_PATH}"
@@ -76,7 +75,9 @@ conda activate "~/conda_envs/moth_detector_env/"
 ```bash
 python s3_download_with_inference.py \
   --country "Costa Rica" \
-  --deployment "Forest Edge - EC4AB109"
+  --deployment "Forest Edge - EC4AB109" \
+  --data_storage_path "./data/harlequin/CostaRica" \
+  --num_workers 1
 ```
 
 To run for all deployments use `--deployment "All"` -->
@@ -100,7 +101,7 @@ or for Costa Rica and Panama only:
 
 ```bash
 python print_deployments.py \
-  --subset_countries 'Costa Rica' 'Panama'
+  --subset_countries 'Costa Rica' 
 ```
 
 For deployments of interest you can then run `s3_download_with_inference.py`, as above, where the `--deployment` argument is passed as the deployment key value. e.g.: 
@@ -144,7 +145,7 @@ To run with slurm you need to be logged in on the [scientific nodes](https://hel
 It is recommended you set up a shell script to runfor your country and deployment of interest. For example, `cr_analysis.sh` peformes inferences for Costa Rica's Garden - 3F1C4908 deployment. You can run this using: 
 
 ```bash
-sbatch cr_analysis.sh
+sbatch harlequin_costarica.sh
 ```
 
 Note to run slurm you will need to install miniforge on the scientific nodes. 

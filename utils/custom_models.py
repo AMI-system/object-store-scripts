@@ -72,7 +72,7 @@ class ResNet50_order(nn.Module):
         return level_1
 
 
-def load_models(device, localisation_model_path, binary_model_path, order_model_path, order_threshold_path, regional_model_path, regional_map_path):
+def load_models(device, localisation_model_path, binary_model_path, order_model_path, order_threshold_path):
 
     # Load the localisation model
     weights_path = localisation_model_path
@@ -113,21 +113,6 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
     model_order = model_order.to(device)
     model_order.eval()
 
-    # Load the species classifier model
-    weights = regional_model_path
-    species_category_map = json.load(
-        open(
-            regional_map_path
-        )
-    )
-    num_classes = len(species_category_map)
-    species_model = Resnet50_species(num_classes=num_classes)
-    species_model = species_model.to(device)
-    checkpoint = torch.load(weights, map_location=device, weights_only=True)
-    # The model state dict is nested in some checkpoints, and not in others
-    state_dict = checkpoint.get("model_state_dict") or checkpoint
-    species_model.load_state_dict(state_dict)
-    species_model.eval()
 
     return ({
         'localisation_model': model_loc,

@@ -4,26 +4,10 @@ from PIL import Image, ImageDraw
 import torchvision.transforms as transforms
 import numpy as np
 from datetime import datetime
+import warnings
 
-def classify_species(image_tensor, regional_model, regional_category_map):
-    """
-    Classify the species of the moth using the regional model.
-    """
-
-    # print('Inference for species...')
-    output = regional_model(image_tensor)
-    predictions = torch.nn.functional.softmax(output, dim=1)
-    predictions = predictions.cpu().detach().numpy()
-    categories = predictions.argmax(axis=1)
-
-    labels = regional_category_map
-
-    index_to_label = {index: label for label, index in labels.items()}
-
-    label = [index_to_label[cat] for cat in categories][0]
-    score = predictions.max(axis=1).astype(float)[0]
-    return label, score
-
+# ignore the pandas Future Warning
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def classify_order(image_tensor, order_model, order_labels, order_data_thresholds):
     """
@@ -42,7 +26,6 @@ def classify_order(image_tensor, order_model, order_labels, order_data_threshold
     label = order_labels[predicted_label]
 
     return label, score
-
 
 def classify_box(image_tensor, binary_model):
     """
@@ -71,8 +54,8 @@ def perform_inf(
     binary_model,
     order_model,
     order_labels,
-    regional_model,
-    regional_category_map,
+    country,
+    region,
     device,
     order_data_thresholds,
     csv_file,
@@ -84,7 +67,6 @@ def perform_inf(
       - object detection
       - object classification
       - order classification
-      - species classification
     """
 
     transform_loc = transforms.Compose(
@@ -117,8 +99,6 @@ def perform_inf(
             "class_confidence",  # binary class info
             "order_name",
             "order_confidence",  # order info
-            "species_name",
-            "species_confidence",  # species info
             "cropped_image_path",
         ]
 
@@ -137,7 +117,7 @@ def perform_inf(
     # Perform object localisation
     with torch.no_grad():
         localisation_outputs = loc_model(input_tensor)
-        
+
         # catch no crops
         if len(localisation_outputs[0]["boxes"]) == 0 or all(localisation_outputs[0]["scores"] < box_threshold):
             df = pd.DataFrame(
@@ -157,13 +137,12 @@ def perform_inf(
                         '',
                         '',
                         '',
-                        '',
-                        '',
                     ]
                 ],
                 columns=all_cols,
             )
-            all_boxes = pd.concat([all_boxes, df])
+            if not df.empty:
+                all_boxes = pd.concat([all_boxes, df])
             df.to_csv(
                 f'{csv_file}',
                 mode="a",
@@ -176,7 +155,7 @@ def perform_inf(
             x_min, y_min, x_max, y_max = localisation_outputs[0]["boxes"][i]
             box_score = localisation_outputs[0]["scores"].tolist()[i]
             box_label = localisation_outputs[0]["labels"].tolist()[i]
-            
+
             x_min = int(int(x_min) * original_width / 300)
             y_min = int(int(y_min) * original_height / 300)
             x_max = int(int(x_max) * original_width / 300)
@@ -192,13 +171,6 @@ def perform_inf(
             if box_width > original_width / 2 or box_height > original_height / 2:
                 continue
 
-            # if save_crops then save the cropped image
-            crop_path = ""
-            if save_crops: 
-                cropped_image = image.crop((x_min, y_min, x_max, y_max))
-                crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
-                cropped_image.save(crop_path)
-
             # Crop the detected region and perform classification
             cropped_image = original_image.crop((x_min, y_min, x_max, y_max))
             cropped_tensor = transform_species(cropped_image).unsqueeze(0).to(device)
@@ -208,30 +180,15 @@ def perform_inf(
                 cropped_tensor, order_model, order_labels, order_data_thresholds
             )
 
-            # Annotate image with bounding box and class
-            if class_name == "moth":
-                species_name, species_confidence = classify_species(
-                    cropped_tensor, regional_model, regional_category_map
-                )
+            # if save_crops then save the cropped image
+            crop_path = ""
+            if order_name == "Coleoptera" or order_name == 'Heteroptera' or order_name == 'Hemiptera':
 
-                draw = ImageDraw.Draw(original_image)
-                draw.rectangle([x_min, y_min, x_max, y_max], outline="green", width=3)
-                draw.text(
-                    (x_min, y_min - 10),
-                    species_name + " , %.3f " % species_confidence,
-                    fill="green",
-                )
+                if save_crops:
+                    crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
+                    cropped_image.save(crop_path)
 
-            else:
-                species_name, species_confidence = None, None
-                draw = ImageDraw.Draw(original_image)
-                draw.rectangle([x_min, y_min, x_max, y_max], outline="red", width=3)
-                draw.text(
-                    (x_min, y_min - 10),
-                    f"order: {order_name}, binary: {class_name}",
-                    fill="red",
-                )
-            draw.text((x_min, y_max), str(box_score), fill="black")
+                print(f"Potential beetle: {crop_path}")
 
             # append to csv with pandas
             df = pd.DataFrame(
@@ -250,16 +207,14 @@ def perform_inf(
                         class_confidence,
                         order_name,
                         order_confidence,
-                        species_name,
-                        species_confidence,
                         crop_path,
                     ]
                 ],
                 columns=all_cols,
             )
-        
-            all_boxes = pd.concat([all_boxes, df])
-            
+            if not df.empty:
+                all_boxes = pd.concat([all_boxes, df])
+
             df.to_csv(
                 f'{csv_file}',
                 mode="a",
@@ -267,7 +222,3 @@ def perform_inf(
                 index=False,
             )
 
-        # Save the annotated image
-        # if (all_boxes['class_name'] == 'moth').any():
-        #     print('...Moth Detected')
-        #     original_image.save(os.path.basename(image_path))
