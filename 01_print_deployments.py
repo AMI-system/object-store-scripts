@@ -82,11 +82,16 @@ def print_deployments(include_inactive=False, subset_countries=None, print_image
             print(f"\033[1mWARNING: {missing} does not have any {act_string}deployments, check spelling\033[0m")
         all_countries = [x for x in all_countries if x in subset_countries]
 
+    
     for country in all_countries:
         country_depl = [x for x in all_deployments if x['country'] == country]
         country_code = list(set([x['country_code'] for x in country_depl]))[0]    
         print("\n\033[1m" + country + " (" + country_code + ") has " + str(len(country_depl)) + act_string + "deployments:\033[0m")
         all_deps = list(set([x['deployment_id'] for x in country_depl]))
+
+        print(f"\n\033[1mAll country deployments for {country}:")
+        print([', '.join(f'{w}' for w in all_deps)])
+        print("\033[0m")
 
         total_images = 0
         for dep in sorted(all_deps):

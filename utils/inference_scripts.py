@@ -54,13 +54,11 @@ def perform_inf(
     binary_model,
     order_model,
     order_labels,
-    country,
-    region,
     device,
     order_data_thresholds,
     csv_file,
     save_crops,
-    box_threshold=0.99
+    box_threshold=0.5
 ):
     """
     Perform inferences on an image including:

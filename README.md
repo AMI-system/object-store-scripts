@@ -1,11 +1,10 @@
-# Performing AMBER Inference on JASMIN
+# Detecting Harlequin Beetles on JASMIN
 
 This directory is designed to download images from Jasmin object store and perform inference to:
 - detect objects
-- classify objects as moth or non-moth
 - identify the order
+- save crops if they are of order __ or __
 
-This branch is designed to save crops of beetles. 
 
 ## JASMIN Set-Up
 
@@ -70,18 +69,6 @@ source ~/miniforge3/bin/activate
 conda activate "~/conda_envs/moth_detector_env/"
 ```
 
-<!-- Inferences are run by country and deployment site. To run the script, for Costa Rica say, use the following command:
-
-```bash
-python s3_download_with_inference.py \
-  --country "Costa Rica" \
-  --deployment "Forest Edge - EC4AB109" \
-  --data_storage_path "./data/harlequin/CostaRica" \
-  --num_workers 1
-```
-
-To run for all deployments use `--deployment "All"` -->
-
 The multi-core pipeline is run in several steps: 
 
 1. Listing All Available Deployments
@@ -91,26 +78,13 @@ The multi-core pipeline is run in several steps:
 
 ### 01. Listing Available Deployments
 
-To find information about the available deployments you can use the print_deployments function. For all deployments: 
+To find information about the available deployments you can use the print_deployments function. For Costa Rica and Panama only: 
 
 ```bash
-python print_deployments.py --include_inactive
+python 01_print_deployments.py \
+  --subset_countries 'Costa Rica' 'Panama'
 ```
 
-or for Costa Rica and Panama only: 
-
-```bash
-python print_deployments.py \
-  --subset_countries 'Costa Rica' 
-```
-
-For deployments of interest you can then run `s3_download_with_inference.py`, as above, where the `--deployment` argument is passed as the deployment key value. e.g.: 
-
-```bash
-python s3_download_with_inference.py \
-  --country "Costa Rica" \
-  --deployment "Garden - 3F1C4908"
-```
 
 ### 02. Generating the Keys
 

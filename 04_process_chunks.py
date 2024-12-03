@@ -48,8 +48,6 @@ def download_and_analyse(
     binary_model=None,
     order_model=None,
     order_labels=None,
-    species_model=None,
-    species_labels=None,
     device=None,
     order_data_thresholds=None,
     csv_file="results.csv",
@@ -69,29 +67,39 @@ def download_and_analyse(
 
     for key in keys:
         local_path = os.path.join(output_dir, os.path.basename(key))
-        print(f"Downloading {key} to {local_path}")
-        client.download_file(bucket_name, key, local_path, Config=transfer_config)
-
+        try:
+            print(f"Downloading {key} to {local_path}")
+            client.download_file(bucket_name, key, local_path, Config=transfer_config)
+        except Exception as e:
+            print(f"Error downloading {key}: {e}")
+            continue  # Skip to the next file
+    
         # Perform image analysis if enabled
         print(f"Analysing {local_path}")
         if perform_inference:
-            perform_inf(
-                local_path,
-                bucket_name=bucket_name,
-                loc_model=localisation_model,
-                binary_model=binary_model,
-                order_model=order_model,
-                order_labels=order_labels,
-                regional_model=species_model,
-                regional_category_map=species_labels,
-                device=device,
-                order_data_thresholds=order_data_thresholds,
-                csv_file=csv_file,
-                save_crops=True,
-            )
+            try:
+                perform_inf(
+                    local_path,
+                    bucket_name=bucket_name,
+                    loc_model=localisation_model,
+                    binary_model=binary_model,
+                    order_model=order_model,
+                    order_labels=order_labels,
+                    device=device,
+                    order_data_thresholds=order_data_thresholds,
+                    csv_file=csv_file,
+                    save_crops=True,
+                )
+            except Exception as e:
+                print(f"Error analyzing {local_path}: {e}")
+    
         # Remove the image if cleanup is enabled
         if remove_image:
-            os.remove(local_path)
+            try:
+                os.remove(local_path)
+            except Exception as e:
+                print(f"Error removing {local_path}: {e}")
+
 
 
 def main(
@@ -106,8 +114,6 @@ def main(
     binary_model=None,
     order_model=None,
     order_labels=None,
-    species_model=None,
-    species_labels=None,
     device=None,
     order_data_thresholds=None,
     csv_file="results.csv",
@@ -142,8 +148,6 @@ def main(
         binary_model=binary_model,
         order_model=order_model,
         order_labels=order_labels,
-        species_model=species_model,
-        species_labels=species_labels,
         device=device,
         order_data_thresholds=order_data_thresholds,
         csv_file=csv_file,
@@ -163,9 +167,6 @@ if __name__ == "__main__":
     parser.add_argument("--binary_model_path", type=str, help="Path to the binary model weights.", default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth")
     parser.add_argument("--order_model_path", type=str, help="Path to the order model weights.", default="./models/dhc_best_128.pth")
     parser.add_argument("--order_labels", type=str, help="Path to the order labels file.")
-    parser.add_argument("--species_model_path", type=str, help="Path to the species model weights.", default="./models/turing-costarica_v03_resnet50_2024-06-04-16-17_state.pt")
-    parser.add_argument("--species_labels", type=str, help="Path to the species labels file.", 
-                       default="./models/03_costarica_data_category_map.json")
     parser.add_argument("--device", type=str, default="cpu", help="Device to run inference on (e.g., cpu or cuda).")
     parser.add_argument("--order_thresholds_path", type=str, help="Path to the order data thresholds file.", default="./models/thresholdsTestTrain.csv")
     parser.add_argument("--csv_file", default="results.csv", help="Path to save analysis results.")
@@ -191,11 +192,8 @@ if __name__ == "__main__":
         getattr(args, 'localisation_model_path'), 
         getattr(args, 'binary_model_path'), 
         getattr(args, 'order_model_path'), 
-        getattr(args, 'order_thresholds_path'), 
-        getattr(args, 'species_model_path'), 
-        getattr(args, 'species_labels')
+        getattr(args, 'order_thresholds_path')
     )
-    
 
     main(
         chunk_id=args.chunk_id,
@@ -210,8 +208,6 @@ if __name__ == "__main__":
         order_model=models['order_model'],
         order_labels=models['order_model_labels'],
         order_data_thresholds=models['order_model_thresholds'],
-        species_model=models['species_model'],
-        species_labels=models['species_model_labels'],
         device=device,
         csv_file=args.csv_file,
     )
