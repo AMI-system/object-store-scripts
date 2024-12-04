@@ -6,15 +6,15 @@
 # SBATCH --ntasks=1
 # SBATCH --cpus-per-task=1
 # SBATCH --mem=4G
-# SBATCH --partition=short-serial
+# SBATCH --partition=long-serial
 
 source ~/miniforge3/bin/activate
 conda activate "~/conda_envs/moth_detector_env/"
 
 json_directory="./keys/harlequin"               
-output_base_dir="./data/harlequin/pan"             
+region="cri"
+output_base_dir="./data/harlequin/${region}"              
 credentials_file="./credentials.json" 
-region="pan"
 
 for json_file in ${json_directory}/${region}/*_workload_chunks.json; do
   if [[ ! -f "$json_file" ]]; then

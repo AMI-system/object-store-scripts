@@ -1,19 +1,21 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from utils.inference_scripts import perform_inf
 import pandas as pd
 import sys
-import multiprocessing
 import tqdm
 import math
-from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 import re
+import requests
+from requests.auth import HTTPBasicAuth
+from boto3.s3.transfer import TransferConfig
 
 
-def list_objects(session, bucket_name, prefix):
+def list_objects(session, bucket_name, prefix, username, password):
     """
     List all objects in an S3 bucket with a specific prefix.
+    """
 
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
@@ -22,6 +24,7 @@ def list_objects(session, bucket_name, prefix):
         )
         response.raise_for_status()
         return response.json()
+
     except requests.exceptions.HTTPError as err:
         print(f"HTTP Error: {err}")
         if response.status_code == 401:
@@ -70,6 +73,7 @@ def download_object(
         print(f" - Saving crops for: {os.path.basename(download_path)}")
 
         if perform_inference:
+            print(download_path)
             perform_inf(
                 download_path,
                 bucket_name=bucket_name,
@@ -174,6 +178,7 @@ def count_files(s3_client, bucket_name, prefix):
             all_keys = all_keys + [file_i]
     return count, all_keys
 
+
 def get_objects(
     session,
     aws_credentials,
@@ -222,16 +227,21 @@ def get_objects(
 
     # Divide the keys among workers
     chunks = [
-        keys[i : i + math.ceil(len(keys) / num_workers)]
-        for i in range(0, len(keys), math.ceil(len(keys) / num_workers))
+        keys[i: i + math.ceil(len(keys) / num_workers)]
+        for i in range(0, len(keys),
+                       math.ceil(len(keys) / num_workers))
     ]
 
     # Shared progress bar
-    progress_bar = tqdm.tqdm(total=total_files, desc=f"Download files for {os.path.basename(csv_file).replace('_results.csv', '')}")
+    results_file = os.path.basename(csv_file).replace('_results.csv', '')
+    progress_bar = tqdm.tqdm(
+        total=total_files,
+        desc=f"Download files for {results_file}"
+    )
 
     def process_chunk(chunk):
         for i in range(0, len(chunk), batch_size):
-            batch_keys = chunk[i : i + batch_size]
+            batch_keys = chunk[i: i + batch_size]
             download_batch(
                 s3_client,
                 bucket_name,

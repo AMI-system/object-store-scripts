@@ -1,6 +1,6 @@
 import torch
 import pandas as pd
-from PIL import Image, ImageDraw
+from PIL import Image
 import torchvision.transforms as transforms
 import numpy as np
 from datetime import datetime
@@ -8,6 +8,7 @@ import warnings
 
 # ignore the pandas Future Warning
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 def classify_order(image_tensor, order_model, order_labels, order_data_thresholds):
     """
@@ -26,6 +27,7 @@ def classify_order(image_tensor, order_model, order_labels, order_data_threshold
     label = order_labels[predicted_label]
 
     return label, score
+
 
 def classify_box(image_tensor, binary_model):
     """
@@ -88,7 +90,7 @@ def perform_inf(
             "bucket_name",
             "analysis_datetime",
             "box_score",
-            "bix_label",
+            "box_label",
             "x_min",
             "y_min",
             "x_max",
@@ -99,7 +101,6 @@ def perform_inf(
             "order_confidence",  # order info
             "cropped_image_path",
         ]
-
 
     image = Image.open(image_path).convert("RGB")
     original_image = image.copy()
@@ -180,10 +181,11 @@ def perform_inf(
 
             # if save_crops then save the cropped image
             crop_path = ""
-            if order_name == "Coleoptera" or order_name == 'Heteroptera' or order_name == 'Hemiptera':
-
+            if order_name == 'Coleoptera' or order_name == 'Heteroptera' or order_name == 'Hemiptera':
+                
                 if save_crops:
-                    crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
+                    crop_path = image_path.replace(".jpg", f"_crop{i}.jpg")
+                print(crop_path)
                     cropped_image.save(crop_path)
 
                 print(f"Potential beetle: {crop_path}")
@@ -219,4 +221,3 @@ def perform_inf(
                 header=False,
                 index=False,
             )
-

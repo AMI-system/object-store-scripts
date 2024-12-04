@@ -3,7 +3,7 @@
 This directory is designed to download images from Jasmin object store and perform inference to:
 - detect objects
 - identify the order
-- save crops if they are of order __ or __
+- save crops if they are of order _Coleoptera_ or _Heteroptera_.
 
 
 ## JASMIN Set-Up
@@ -76,6 +76,8 @@ The multi-core pipeline is run in several steps:
 3. Chop the keys into chunks
 4. Analyse the chunks
 
+## Individual Steps
+
 ### 01. Listing Available Deployments
 
 To find information about the available deployments you can use the print_deployments function. For Costa Rica and Panama only: 
@@ -104,29 +106,36 @@ python 03_pre_chop_files.py --input_file './keys/dep000031_keys.txt' --file_exte
 python 04_process_chunks.py \
   --chunk_id 1 \
   --json_file './keys/dep000031_workload_chunks.json' \
-  --output_dir './data/dep000031' \
+  --output_dir './data/harlequin/cri/dep000031' \
   --bucket_name 'cri' \
   --credentials_file './credentials.json' \
   --perform_inference \
   --remove_image
 ```
 
-
-## Running with slurm
+## Running all steps with SLURM
 
 To run with slurm you need to be logged in on the [scientific nodes](https://help.jasmin.ac.uk/docs/interactive-computing/sci-servers/). 
 
-It is recommended you set up a shell script to runfor your country and deployment of interest. For example, `cr_analysis.sh` peformes inferences for Costa Rica's Garden - 3F1C4908 deployment. You can run this using: 
+For the harlequin pipeline you simply need to run: 
 
 ```bash
-sbatch harlequin_costarica.sh
+python 01_print_deployments.py \
+  --subset_countries 'Costa Rica' 'Panama'
 ```
 
-Note to run slurm you will need to install miniforge on the scientific nodes. 
+Then populate `generate_keys.sh` with the deployment ids of interest. Finally: 
+
+```bash
+sbatch generate_keys.sh
+sbatch process_chunks.sh
+```
 
 To check the slurm queue: 
 
 ```bash
 squeue -u USERNAME
 ```
+
+
 

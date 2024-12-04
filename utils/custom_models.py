@@ -7,7 +7,6 @@ import torch.nn as nn
 import timm
 from torchvision import models
 import pandas as pd
-import json
 
 
 class Resnet50_species(torch.nn.Module):
@@ -112,7 +111,6 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
     model_order.load_state_dict(torch.load(savedWeights, map_location=device, weights_only=True))
     model_order = model_order.to(device)
     model_order.eval()
-
 
     return ({
         'localisation_model': model_loc,

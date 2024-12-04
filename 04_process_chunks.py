@@ -16,6 +16,7 @@ transfer_config = TransferConfig(
     io_chunksize=262144,  # 256KB
 )
 
+
 def initialise_session(credentials_file="credentials.json"):
     """
     Load AWS and API credentials from a configuration file and initialise an AWS session.
@@ -73,7 +74,7 @@ def download_and_analyse(
         except Exception as e:
             print(f"Error downloading {key}: {e}")
             continue  # Skip to the next file
-    
+
         # Perform image analysis if enabled
         print(f"Analysing {local_path}")
         if perform_inference:
@@ -92,14 +93,13 @@ def download_and_analyse(
                 )
             except Exception as e:
                 print(f"Error analyzing {local_path}: {e}")
-    
+
         # Remove the image if cleanup is enabled
         if remove_image:
             try:
                 os.remove(local_path)
             except Exception as e:
                 print(f"Error removing {local_path}: {e}")
-
 
 
 def main(
@@ -156,22 +156,49 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process a specific chunk of S3 keys.")
-    parser.add_argument("--chunk_id", required=True, help="ID of the chunk to process (e.g., 0, 1, 2, 3).")
-    parser.add_argument("--json_file", required=True, help="Path to the JSON file with key chunks.")
-    parser.add_argument("--output_dir", required=True, help="Directory to save downloaded files and analysis results.", default="./data/")
-    parser.add_argument("--bucket_name", required=True, help="Name of the S3 bucket.")
-    parser.add_argument("--credentials_file", default="credentials.json", help="Path to AWS credentials file.")
-    parser.add_argument("--remove_image", action="store_true", help="Remove images after processing.")
+    parser.add_argument(
+        "--chunk_id", required=True,
+        help="ID of the chunk to process (e.g., 0, 1, 2, 3)."
+    )
+    parser.add_argument(
+        "--json_file", required=True, help="Path to the JSON file with key chunks."
+    )
+    parser.add_argument(
+        "--output_dir", required=True, default="./data/",
+        help="Directory to save downloaded files and analysis results."
+    )
+    parser.add_argument(
+        "--bucket_name", required=True, help="Name of the S3 bucket."
+    )
+    parser.add_argument(
+        "--credentials_file", default="credentials.json", help="Path to AWS credentials file."
+    )
+    parser.add_argument(
+        "--remove_image", action="store_true", help="Remove images after processing."
+    )
     parser.add_argument("--perform_inference", action="store_true", help="Enable inference.")
-    parser.add_argument("--localisation_model_path", type=str, help="Path to the localisation model weights.", default="./models/v1_localizmodel_2021-08-17-12-06.pt")
-    parser.add_argument("--binary_model_path", type=str, help="Path to the binary model weights.", default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth")
-    parser.add_argument("--order_model_path", type=str, help="Path to the order model weights.", default="./models/dhc_best_128.pth")
+    parser.add_argument(
+        "--localisation_model_path", type=str, default="./models/v1_localizmodel_2021-08-17-12-06.pt",
+        help="Path to the localisation model weights."
+    )
+    parser.add_argument(
+        "--binary_model_path", type=str, help="Path to the binary model weights.",
+        default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth"
+    )
+    parser.add_argument(
+        "--order_model_path", type=str, help="Path to the order model weights.", default="./models/dhc_best_128.pth"
+    )
     parser.add_argument("--order_labels", type=str, help="Path to the order labels file.")
-    parser.add_argument("--device", type=str, default="cpu", help="Device to run inference on (e.g., cpu or cuda).")
-    parser.add_argument("--order_thresholds_path", type=str, help="Path to the order data thresholds file.", default="./models/thresholdsTestTrain.csv")
+    parser.add_argument(
+        "--device", type=str, default="cpu",
+        help="Device to run inference on (e.g., cpu or cuda)."
+    )
+    parser.add_argument(
+        "--order_thresholds_path", type=str, default="./models/thresholdsTestTrain.csv",
+        help="Path to the order data thresholds file."
+    )
     parser.add_argument("--csv_file", default="results.csv", help="Path to save analysis results.")
 
-    
     args = parser.parse_args()
 
     if torch.cuda.is_available():
@@ -186,12 +213,12 @@ if __name__ == "__main__":
             "\033[95m\033[1mCuda not available, using CPU "
             + "\N{Cross Mark}\033[0m\033[0m"
         )
-    
+
     models = load_models(
-        device, 
-        getattr(args, 'localisation_model_path'), 
-        getattr(args, 'binary_model_path'), 
-        getattr(args, 'order_model_path'), 
+        device,
+        getattr(args, 'localisation_model_path'),
+        getattr(args, 'binary_model_path'),
+        getattr(args, 'order_model_path'),
         getattr(args, 'order_thresholds_path')
     )
 
