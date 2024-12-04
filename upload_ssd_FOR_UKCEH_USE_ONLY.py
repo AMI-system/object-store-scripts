@@ -21,7 +21,7 @@ PASSWORD = "Osd7r0I9hkFWLY0Eqoia"
 
 async def upload_files_in_batches(name, bucket, dep_id, data_type, files, batch_size=100):
     """Upload files in batches with a second check after the first upload."""
-    async with aiohttp.ClientSession(timeout=ClientTimeout(total=1200)) as session:
+    async with aiohttp.ClientSession(timeout=ClientTimeout(total=3600)) as session:
         while True:
             print(f"\nChecking for files to upload for data type: {data_type}")
             progress_exist = tqdm.asyncio.tqdm(total=len(files), desc="Checking if files already in server")
@@ -86,7 +86,12 @@ async def upload_files(session, name, bucket, dep_id, data_type, files):
         except Exception as e:
             print(f"Error getting presigned URL for {file_name}: {e}")
 
-    await asyncio.gather(*tasks)
+    try:
+        await asyncio.gather(*tasks)
+    except Exception as e:
+        print(f"Error during upload: {e}. Pausing for 10 minutes...")
+        await asyncio.sleep(600)  # Pause for 600 seconds (10 minutes)
+        raise  # Re-raise the exception to trigger retry or terminate gracefully
 
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
 async def get_presigned_url(session, name, bucket, dep_id, data_type, file_name, file_type):
@@ -119,45 +124,58 @@ async def upload_file_to_s3(session, presigned_url, file_path, file_type):
         print(f"An unexpected error occurred: {e}")
 
 def get_file_info(file_path):
-    """Get file information including name, content, and type."""
+    """Get file information including name and type."""
+    if not isinstance(file_path, (str, bytes)):
+        file_path = str(file_path)  # Convert PosixPath to string
+    
     filename = os.path.basename(file_path)
     file_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
     return filename, file_type
 
 def gather_files(ssd_path):
-    """Gather files from the specified folders on the SSD, excluding $RECYCLE.BIN."""
-    def filter_recycle_bin(file_list):
-        """Exclude files in the $RECYCLE.BIN folder."""
-        return [file for file in file_list if "$RECYCLE.BIN" not in str(file) and ".Trashes" not in str(file)]
+    """Gather files from the specified folders on the SSD, excluding small files, $RECYCLE.BIN, and corrupted files."""
+    def filter_recycle_bin_and_small_files(file_list):
+        """Exclude files in the $RECYCLE.BIN folder and files smaller than 10 KB."""
+        valid_files = []
+        for file in file_list:
+            try:
+                if "$RECYCLE.BIN" not in str(file) and ".Trashes" not in str(file):
+                    if os.path.getsize(file) >= 10 * 1024:  # File size >= 10 KB
+                        valid_files.append(file)
+            except OSError as e:
+                print(f"Skipping file '{file}' due to error: {e}")
+        return valid_files
 
     paths = {
-        "snapshot_images": filter_recycle_bin(list(pathlib.Path(ssd_path, "images").rglob("*.jpg"))),
-        "audible_recordings": filter_recycle_bin(list(pathlib.Path(ssd_path, "audio").rglob("*.wav"))),
-        "ultrasound_recordings": filter_recycle_bin(list(pathlib.Path(ssd_path, "ultrasonic").rglob("*.wav")))
+        "snapshot_images": filter_recycle_bin_and_small_files(list(pathlib.Path(ssd_path, "images").rglob("*.jpg"))),
+        "audible_recordings": filter_recycle_bin_and_small_files(list(pathlib.Path(ssd_path, "audio").rglob("*.wav"))),
+        "ultrasound_recordings": filter_recycle_bin_and_small_files(list(pathlib.Path(ssd_path, "ultrasonic").rglob("*.wav")))
     }
     
     for data_type, files in paths.items():
-        print(f"Found {len(files)} files in {data_type}.")
+        print(f"Found {len(files)} valid files in {data_type}.")
     
     return paths
 
-# Specify bucket, dep_id, and the SSD path containing data folders
-bucket = "gbr"
-dep_id = "dep000065"
-ssd_path = "E:/"
-
 # Run the upload process
 if __name__ == "__main__":
+
+    # Specify your name, bucket, dep_id, and the SSD path containing data folders
     fullname = "Dylan Carbone"
+    bucket = "test-upload" # if you want to trial an upload to the test bucket, use 'test-upload'
+    dep_id = "dep_test" # if you want to trial an upload to the test bucket, use 'dep_test'
+    ssd_path = "C:/Users/dylcar/OneDrive - UKCEH/Desktop/AMI trial data"
+    batch_size = 10
+
     data_paths = gather_files(ssd_path)
     
     async def main():
         for data_type, files in data_paths.items():
             if files:
-                await upload_files_in_batches(fullname, bucket, dep_id, data_type, files)
+                await upload_files_in_batches(fullname, bucket, dep_id, data_type, files, batch_size)
             else:
                 print(f"No files found in {data_type} folder. Skipping.")
 
     # Run all tasks in a single event loop
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())    
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(main())
