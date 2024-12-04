@@ -136,7 +136,7 @@ def main(
 
     client = initialise_session(credentials_file)
 
-    keys = chunks[chunk_id]['keys']
+    keys = chunks[chunk_id]["keys"]
     download_and_analyse(
         keys=keys,
         output_dir=output_dir,
@@ -157,47 +157,67 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process a specific chunk of S3 keys.")
     parser.add_argument(
-        "--chunk_id", required=True,
-        help="ID of the chunk to process (e.g., 0, 1, 2, 3)."
+        "--chunk_id",
+        required=True,
+        help="ID of the chunk to process (e.g., 0, 1, 2, 3).",
     )
     parser.add_argument(
         "--json_file", required=True, help="Path to the JSON file with key chunks."
     )
     parser.add_argument(
-        "--output_dir", required=True, default="./data/",
-        help="Directory to save downloaded files and analysis results."
+        "--output_dir",
+        required=True,
+        default="./data/",
+        help="Directory to save downloaded files and analysis results.",
     )
+    parser.add_argument("--bucket_name", required=True, help="Name of the S3 bucket.")
     parser.add_argument(
-        "--bucket_name", required=True, help="Name of the S3 bucket."
-    )
-    parser.add_argument(
-        "--credentials_file", default="credentials.json", help="Path to AWS credentials file."
+        "--credentials_file",
+        default="credentials.json",
+        help="Path to AWS credentials file.",
     )
     parser.add_argument(
         "--remove_image", action="store_true", help="Remove images after processing."
     )
-    parser.add_argument("--perform_inference", action="store_true", help="Enable inference.")
     parser.add_argument(
-        "--localisation_model_path", type=str, default="./models/v1_localizmodel_2021-08-17-12-06.pt",
-        help="Path to the localisation model weights."
+        "--perform_inference", action="store_true", help="Enable inference."
     )
     parser.add_argument(
-        "--binary_model_path", type=str, help="Path to the binary model weights.",
-        default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth"
+        "--localisation_model_path",
+        type=str,
+        default="./models/v1_localizmodel_2021-08-17-12-06.pt",
+        help="Path to the localisation model weights.",
     )
     parser.add_argument(
-        "--order_model_path", type=str, help="Path to the order model weights.", default="./models/dhc_best_128.pth"
-    )
-    parser.add_argument("--order_labels", type=str, help="Path to the order labels file.")
-    parser.add_argument(
-        "--device", type=str, default="cpu",
-        help="Device to run inference on (e.g., cpu or cuda)."
+        "--binary_model_path",
+        type=str,
+        help="Path to the binary model weights.",
+        default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth",
     )
     parser.add_argument(
-        "--order_thresholds_path", type=str, default="./models/thresholdsTestTrain.csv",
-        help="Path to the order data thresholds file."
+        "--order_model_path",
+        type=str,
+        help="Path to the order model weights.",
+        default="./models/dhc_best_128.pth",
     )
-    parser.add_argument("--csv_file", default="results.csv", help="Path to save analysis results.")
+    parser.add_argument(
+        "--order_labels", type=str, help="Path to the order labels file."
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        help="Device to run inference on (e.g., cpu or cuda).",
+    )
+    parser.add_argument(
+        "--order_thresholds_path",
+        type=str,
+        default="./models/thresholdsTestTrain.csv",
+        help="Path to the order data thresholds file.",
+    )
+    parser.add_argument(
+        "--csv_file", default="results.csv", help="Path to save analysis results."
+    )
 
     args = parser.parse_args()
 
@@ -216,10 +236,10 @@ if __name__ == "__main__":
 
     models = load_models(
         device,
-        getattr(args, 'localisation_model_path'),
-        getattr(args, 'binary_model_path'),
-        getattr(args, 'order_model_path'),
-        getattr(args, 'order_thresholds_path')
+        getattr(args, "localisation_model_path"),
+        getattr(args, "binary_model_path"),
+        getattr(args, "order_model_path"),
+        getattr(args, "order_thresholds_path"),
     )
 
     main(
@@ -230,11 +250,11 @@ if __name__ == "__main__":
         credentials_file=args.credentials_file,
         remove_image=args.remove_image,
         perform_inference=args.perform_inference,
-        localisation_model=models['localisation_model'],
-        binary_model=models['classification_model'],
-        order_model=models['order_model'],
-        order_labels=models['order_model_labels'],
-        order_data_thresholds=models['order_model_thresholds'],
+        localisation_model=models["localisation_model"],
+        binary_model=models["classification_model"],
+        order_model=models["order_model"],
+        order_labels=models["order_model_labels"],
+        order_data_thresholds=models["order_model_thresholds"],
         device=device,
         csv_file=args.csv_file,
     )

@@ -71,7 +71,13 @@ class ResNet50_order(nn.Module):
         return level_1
 
 
-def load_models(device, localisation_model_path, binary_model_path, order_model_path, order_threshold_path):
+def load_models(
+    device,
+    localisation_model_path,
+    binary_model_path,
+    order_model_path,
+    order_threshold_path,
+):
 
     # Load the localisation model
     weights_path = localisation_model_path
@@ -108,14 +114,16 @@ def load_models(device, localisation_model_path, binary_model_path, order_model_
     order_labels = order_data_thresholds["ClassName"].to_list()
     num_classes = len(order_labels)
     model_order = ResNet50_order(num_classes=num_classes)
-    model_order.load_state_dict(torch.load(savedWeights, map_location=device, weights_only=True))
+    model_order.load_state_dict(
+        torch.load(savedWeights, map_location=device, weights_only=True)
+    )
     model_order = model_order.to(device)
     model_order.eval()
 
-    return ({
-        'localisation_model': model_loc,
-        'classification_model': classification_model,
-        'order_model': model_order,
-        'order_model_thresholds': order_data_thresholds,
-        'order_model_labels': order_labels
-    })
+    return {
+        "localisation_model": model_loc,
+        "classification_model": classification_model,
+        "order_model": model_order,
+        "order_model_thresholds": order_data_thresholds,
+        "order_model_labels": order_labels,
+    }

@@ -214,7 +214,9 @@ def get_objects(
     keys = []
     for page in page_iterator:
         if os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
-            print(f'{page.get("Contents", [])[0]["Key"]} is suspected corrupt, skipping')
+            print(
+                f'{page.get("Contents", [])[0]["Key"]} is suspected corrupt, skipping'
+            )
             continue
 
         for obj in page.get("Contents", []):
@@ -222,26 +224,24 @@ def get_objects(
 
     # don't rerun previously analysed images
     results_df = pd.read_csv(csv_file, dtype=str)
-    run_images = [re.sub(r'^.*?dep', 'dep', x) for x in results_df['image_path']]
+    run_images = [re.sub(r"^.*?dep", "dep", x) for x in results_df["image_path"]]
     keys = [x for x in keys if x not in run_images]
 
     # Divide the keys among workers
     chunks = [
-        keys[i: i + math.ceil(len(keys) / num_workers)]
-        for i in range(0, len(keys),
-                       math.ceil(len(keys) / num_workers))
+        keys[i : i + math.ceil(len(keys) / num_workers)]
+        for i in range(0, len(keys), math.ceil(len(keys) / num_workers))
     ]
 
     # Shared progress bar
-    results_file = os.path.basename(csv_file).replace('_results.csv', '')
+    results_file = os.path.basename(csv_file).replace("_results.csv", "")
     progress_bar = tqdm.tqdm(
-        total=total_files,
-        desc=f"Download files for {results_file}"
+        total=total_files, desc=f"Download files for {results_file}"
     )
 
     def process_chunk(chunk):
         for i in range(0, len(chunk), batch_size):
-            batch_keys = chunk[i: i + batch_size]
+            batch_keys = chunk[i : i + batch_size]
             download_batch(
                 s3_client,
                 bucket_name,

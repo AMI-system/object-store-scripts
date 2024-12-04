@@ -48,9 +48,17 @@ def count_files(s3_client, bucket_name, prefix):
     return count
 
 
-def print_deployments(aws_credentials, include_inactive=False, subset_countries=None, print_image_count=True):
+def print_deployments(
+    aws_credentials,
+    include_inactive=False,
+    subset_countries=None,
+    print_image_count=True,
+):
     """Print deployment details, optionally filtering by country or active status."""
-    username, password = aws_credentials["UKCEH_username"], aws_credentials["UKCEH_password"]
+    username, password = (
+        aws_credentials["UKCEH_username"],
+        aws_credentials["UKCEH_password"],
+    )
     deployments = get_deployments(username, password)
 
     # Filter active deployments if not including inactive
@@ -76,16 +84,22 @@ def print_deployments(aws_credentials, include_inactive=False, subset_countries=
 
     # Print deployments for each country
     for country in all_countries:
-        country_deployments = [d for d in deployments if d["country"].title() == country]
+        country_deployments = [
+            d for d in deployments if d["country"].title() == country
+        ]
         country_code = country_deployments[0]["country_code"].lower()
-        print(f"\n{country} ({country_code}) has {len(country_deployments)} deployments:")
+        print(
+            f"\n{country} ({country_code}) has {len(country_deployments)} deployments:"
+        )
 
         total_images = 0
         for dep in sorted(country_deployments, key=lambda d: d["deployment_id"]):
             deployment_id = dep["deployment_id"]
             location_name = dep["location_name"]
             camera_id = dep["camera_id"]
-            print(f" - Deployment ID: {deployment_id}, Name: {location_name}, Camera ID: {camera_id}")
+            print(
+                f" - Deployment ID: {deployment_id}, Name: {location_name}, Camera ID: {camera_id}"
+            )
 
             if print_image_count:
                 prefix = f"{deployment_id}/snapshot_images"
@@ -105,16 +119,22 @@ if __name__ == "__main__":
         description="Script for printing the deployments available on the Jasmin object store."
     )
     parser.add_argument(
-        "--include_inactive", action=argparse.BooleanOptionalAction,
-        default=False, help="Flag to include inactive deployments."
+        "--include_inactive",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Flag to include inactive deployments.",
     )
     parser.add_argument(
-        "--print_image_count", action=argparse.BooleanOptionalAction,
-        default=False, help="Flag to print the number of images per deployment."
+        "--print_image_count",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Flag to print the number of images per deployment.",
     )
     parser.add_argument(
-        "--subset_countries", nargs='+', default=None,
-        help="Optional list to subset for specific countries (e.g. --subset_countries 'Panama' 'Thailand')."
+        "--subset_countries",
+        nargs="+",
+        default=None,
+        help="Optional list to subset for specific countries (e.g. --subset_countries 'Panama' 'Thailand').",
     )
     args = parser.parse_args()
 
@@ -122,5 +142,5 @@ if __name__ == "__main__":
         aws_credentials,
         args.include_inactive,
         args.subset_countries,
-        args.print_image_count
+        args.print_image_count,
     )
