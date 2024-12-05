@@ -8,10 +8,10 @@ credentials are loaded from a configuration file (credentials.json).
 """
 
 import json
-import boto3
 import argparse
 import sys
 import requests
+import boto3
 from requests.auth import HTTPBasicAuth
 
 
@@ -48,16 +48,44 @@ def count_files(s3_client, bucket_name, prefix):
     return count
 
 
+def initialise_session(credentials):
+    """Initialise the AWS S3 client"""
+    session = boto3.Session(
+        aws_access_key_id=credentials["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=credentials["AWS_SECRET_ACCESS_KEY"],
+        region_name=credentials["AWS_REGION"],
+    )
+    s3_client = session.client("s3", endpoint_url=credentials["AWS_URL_ENDPOINT"])
+    return s3_client
+
+
+def deployment_image_counter(dep, client, country, print_count):
+    """Calculate the number of images for a given deployment"""
+    deployment_id = dep["deployment_id"]
+    location_name = dep["location_name"]
+    camera_id = dep["camera_id"]
+    print(
+        f" - Deployment ID: {deployment_id}, Name: {location_name}, Camera ID: {camera_id}"
+    )
+
+    if print_count:
+        prefix = f"{deployment_id}/snapshot_images"
+        image_count = count_files(client, country, prefix)
+        print(f"   Images: {image_count}")
+
+    return image_count
+
+
 def print_deployments(
-    aws_credentials,
+    credentials,
     include_inactive=False,
     subset_countries=None,
     print_image_count=True,
 ):
     """Print deployment details, optionally filtering by country or active status."""
     username, password = (
-        aws_credentials["UKCEH_username"],
-        aws_credentials["UKCEH_password"],
+        credentials["UKCEH_username"],
+        credentials["UKCEH_password"],
     )
     deployments = get_deployments(username, password)
 
@@ -65,13 +93,8 @@ def print_deployments(
     if not include_inactive:
         deployments = [d for d in deployments if d["status"] == "active"]
 
-    # Initialize S3 client
-    session = boto3.Session(
-        aws_access_key_id=aws_credentials["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=aws_credentials["AWS_SECRET_ACCESS_KEY"],
-        region_name=aws_credentials["AWS_REGION"],
-    )
-    s3_client = session.client("s3", endpoint_url=aws_credentials["AWS_URL_ENDPOINT"])
+    # Initialise S3 client
+    client = initialise_session(credentials)
 
     # Prepare subset of countries if specified
     all_countries = sorted({dep["country"].title() for dep in deployments})
@@ -94,18 +117,7 @@ def print_deployments(
 
         total_images = 0
         for dep in sorted(country_deployments, key=lambda d: d["deployment_id"]):
-            deployment_id = dep["deployment_id"]
-            location_name = dep["location_name"]
-            camera_id = dep["camera_id"]
-            print(
-                f" - Deployment ID: {deployment_id}, Name: {location_name}, Camera ID: {camera_id}"
-            )
-
-            if print_image_count:
-                prefix = f"{deployment_id}/snapshot_images"
-                image_count = count_files(s3_client, country_code, prefix)
-                total_images += image_count
-                print(f"   Images: {image_count}")
+            total_images += deployment_image_counter(dep, client, country_code, print_image_count)
 
         if print_image_count:
             print(f"Total images in {country}: {total_images}")

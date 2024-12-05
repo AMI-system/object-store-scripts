@@ -1,12 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""This script extracts all keys in AWS object-store"""
+
 import argparse
-import boto3
+
 import json
 import os
-from utils.inference_scripts import perform_inf
+import boto3
 from boto3.s3.transfer import TransferConfig
 import torch
+from utils.inference_scripts import perform_inf
 from utils.custom_models import load_models
-
 
 # Transfer configuration for optimised S3 download
 transfer_config = TransferConfig(
@@ -45,12 +50,8 @@ def download_and_analyse(
     client,
     remove_image=True,
     perform_inference=True,
-    localisation_model=None,
-    binary_model=None,
-    order_model=None,
-    order_labels=None,
-    device=None,
-    order_data_thresholds=None,
+    all_models=None,
+    proc_device=None,
     csv_file="results.csv",
 ):
     """
@@ -82,12 +83,12 @@ def download_and_analyse(
                 perform_inf(
                     local_path,
                     bucket_name=bucket_name,
-                    loc_model=localisation_model,
-                    binary_model=binary_model,
-                    order_model=order_model,
-                    order_labels=order_labels,
-                    device=device,
-                    order_data_thresholds=order_data_thresholds,
+                    loc_model=all_models["localisation_model"],
+                    binary_model=all_models["classification_model"],
+                    order_model=all_models["order_model"],
+                    order_labels=all_models["order_model_labels"],
+                    proc_device=proc_device,
+                    order_data_thresholds=all_models["order_model_thresholds"],
                     csv_file=csv_file,
                     save_crops=True,
                 )
@@ -110,12 +111,8 @@ def main(
     credentials_file="credentials.json",
     remove_image=True,
     perform_inference=True,
-    localisation_model=None,
-    binary_model=None,
-    order_model=None,
-    order_labels=None,
-    device=None,
-    order_data_thresholds=None,
+    all_models=None,
+    proc_device=None,
     csv_file="results.csv",
 ):
     """
@@ -128,7 +125,7 @@ def main(
         bucket_name (str): S3 bucket name.
         Other args: Parameters for download and analysis.
     """
-    with open(json_file, "r") as f:
+    with open(json_file, "r", encoding="utf-8") as f:
         chunks = json.load(f)
 
     if chunk_id not in chunks:
@@ -144,12 +141,8 @@ def main(
         client=client,
         remove_image=remove_image,
         perform_inference=perform_inference,
-        localisation_model=localisation_model,
-        binary_model=binary_model,
-        order_model=order_model,
-        order_labels=order_labels,
-        device=device,
-        order_data_thresholds=order_data_thresholds,
+        all_models=all_models,
+        proc_device=proc_device,
         csv_file=csv_file,
     )
 
@@ -236,10 +229,10 @@ if __name__ == "__main__":
 
     models = load_models(
         device,
-        getattr(args, "localisation_model_path"),
-        getattr(args, "binary_model_path"),
-        getattr(args, "order_model_path"),
-        getattr(args, "order_thresholds_path"),
+        args.localisation_model_path,
+        args.binary_model_path,
+        args.order_model_path,
+        args.order_thresholds_path,
     )
 
     main(
@@ -250,11 +243,7 @@ if __name__ == "__main__":
         credentials_file=args.credentials_file,
         remove_image=args.remove_image,
         perform_inference=args.perform_inference,
-        localisation_model=models["localisation_model"],
-        binary_model=models["classification_model"],
-        order_model=models["order_model"],
-        order_labels=models["order_model_labels"],
-        order_data_thresholds=models["order_model_thresholds"],
-        device=device,
+        all_models=models,
+        proc_device=device,
         csv_file=args.csv_file,
     )

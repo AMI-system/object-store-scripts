@@ -229,7 +229,7 @@ def get_objects(
 
     # Divide the keys among workers
     chunks = [
-        keys[i : i + math.ceil(len(keys) / num_workers)]
+        keys[i: i + math.ceil(len(keys) / num_workers)]
         for i in range(0, len(keys), math.ceil(len(keys) / num_workers))
     ]
 
@@ -241,7 +241,7 @@ def get_objects(
 
     def process_chunk(chunk):
         for i in range(0, len(chunk), batch_size):
-            batch_keys = chunk[i : i + batch_size]
+            batch_keys = chunk[i: i + batch_size]
             download_batch(
                 s3_client,
                 bucket_name,

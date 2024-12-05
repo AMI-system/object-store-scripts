@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # SBATCH --job-name=process_chunks
-# SBATCH --output=logs/process_chunks.out
+# SBATCH #SBATCH --output=./logs/process_chunks_pan.out
 # SBATCH --time=01:00:00
 # SBATCH --ntasks=1
 # SBATCH --cpus-per-task=1
@@ -12,7 +12,7 @@ source ~/miniforge3/bin/activate
 conda activate "~/conda_envs/moth_detector_env/"
 
 json_directory="./keys/harlequin"               
-region="cri"
+region="pan"
 output_base_dir="./data/harlequin/${region}"              
 credentials_file="./credentials.json" 
 

@@ -7,7 +7,7 @@ from datetime import datetime
 import warnings
 
 # ignore the pandas Future Warning
-warnings.simplefilter(action="ignore", category=FutureWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 def classify_order(image_tensor, order_model, order_labels, order_data_thresholds):
@@ -56,11 +56,11 @@ def perform_inf(
     binary_model,
     order_model,
     order_labels,
-    device,
+    proc_device,
     order_data_thresholds,
     csv_file,
     save_crops,
-    box_threshold=0.5,
+    box_threshold=0.5
 ):
     """
     Perform inferences on an image including:
@@ -86,56 +86,56 @@ def perform_inf(
     )
 
     all_cols = [
-        "image_path",
-        "bucket_name",
-        "analysis_datetime",
-        "box_score",
-        "box_label",
-        "x_min",
-        "y_min",
-        "x_max",
-        "y_max",  # localisation info
-        "class_name",
-        "class_confidence",  # binary class info
-        "order_name",
-        "order_confidence",  # order info
-        "cropped_image_path",
-    ]
+            "image_path",
+            "bucket_name",
+            "analysis_datetime",
+            "box_score",
+            "box_label",
+            "x_min",
+            "y_min",
+            "x_max",
+            "y_max",  # localisation info
+            "class_name",
+            "class_confidence",  # binary class info
+            "order_name",
+            "order_confidence",  # order info
+            "cropped_image_path",
+        ]
 
     image = Image.open(image_path).convert("RGB")
     original_image = image.copy()
     original_width, original_height = image.size
 
     # print('Inference for localisation...')
-    input_tensor = transform_loc(image).unsqueeze(0).to(device)
+    input_tensor = transform_loc(image).unsqueeze(0).to(proc_device)
 
-    all_boxes = pd.DataFrame(columns=all_cols)
+    all_boxes = pd.DataFrame(
+        columns=all_cols
+    )
 
     # Perform object localisation
     with torch.no_grad():
         localisation_outputs = loc_model(input_tensor)
 
         # catch no crops
-        if len(localisation_outputs[0]["boxes"]) == 0 or all(
-            localisation_outputs[0]["scores"] < box_threshold
-        ):
+        if len(localisation_outputs[0]["boxes"]) == 0 or all(localisation_outputs[0]["scores"] < box_threshold):
             df = pd.DataFrame(
                 [
                     [
                         image_path,
                         bucket_name,
                         str(datetime.now()),
-                        "None",
-                        "None",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
+                        'None',
+                        'None',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
                     ]
                 ],
                 columns=all_cols,
@@ -143,7 +143,7 @@ def perform_inf(
             if not df.empty:
                 all_boxes = pd.concat([all_boxes, df])
             df.to_csv(
-                f"{csv_file}",
+                f'{csv_file}',
                 mode="a",
                 header=False,
                 index=False,
@@ -172,7 +172,7 @@ def perform_inf(
 
             # Crop the detected region and perform classification
             cropped_image = original_image.crop((x_min, y_min, x_max, y_max))
-            cropped_tensor = transform_species(cropped_image).unsqueeze(0).to(device)
+            cropped_tensor = transform_species(cropped_image).unsqueeze(0).to(proc_device)
 
             class_name, class_confidence = classify_box(cropped_tensor, binary_model)
             order_name, order_confidence = classify_order(
@@ -181,12 +181,8 @@ def perform_inf(
 
             # if save_crops then save the cropped image
             crop_path = ""
-            if (
-                order_name == "Coleoptera"
-                or order_name == "Heteroptera"
-                or order_name == "Hemiptera"
-            ):
-
+            if order_name == 'Coleoptera' or order_name == 'Heteroptera' or order_name == 'Hemiptera':
+                
                 if save_crops:
                     crop_path = image_path.replace(".jpg", f"_crop{i}.jpg")
                     print(crop_path)
@@ -220,7 +216,7 @@ def perform_inf(
                 all_boxes = pd.concat([all_boxes, df])
 
             df.to_csv(
-                f"{csv_file}",
+                f'{csv_file}',
                 mode="a",
                 header=False,
                 index=False,

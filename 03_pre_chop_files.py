@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""This script separates kesy into chunks and saves output to json for processing"""
+
 import json
 import argparse
 from math import ceil
@@ -8,7 +13,7 @@ def load_workload(input_file, file_extensions):
     """
     Load workload from a file. Assumes each line contains an S3 key.
     """
-    with open(input_file, "r") as f:
+    with open(input_file, "r", encoding='UTF-8') as f:
         all_keys = [line.strip() for line in f.readlines()]
 
     subset_keys = [x for x in all_keys if x.endswith(tuple(file_extensions))]
@@ -28,7 +33,7 @@ def split_workload(keys, chunk_size):
     """
     num_chunks = ceil(len(keys) / chunk_size)
     chunks = {
-        str(i + 1): {"keys": keys[i * chunk_size : (i + 1) * chunk_size]}
+        str(i + 1): {"keys": keys[i * chunk_size: (i + 1) * chunk_size]}
         for i in range(num_chunks)
     }
     print(f"{len(chunks)} chunks")
@@ -39,11 +44,12 @@ def save_chunks(chunks, output_file):
     """
     Save chunks to a JSON file.
     """
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding='UTF-8') as f:
         json.dump(chunks, f, indent=4)
 
 
 def main():
+    """Passes user defined arguments to python functions."""
     parser = argparse.ArgumentParser(
         description="Pre-chop S3 workload into manageable chunks."
     )

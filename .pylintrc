@@ -1,5 +1,5 @@
 [MESSAGES CONTROL]
-disable=duplicate-code,broad-exception-caught,global-statement
+disable=duplicate-code,broad-exception-caught,global-statement,invalid-name
 
 [FORMAT]
 max-line-length=120

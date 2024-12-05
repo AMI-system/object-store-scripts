@@ -1,6 +1,11 @@
-import boto3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""This script extracts all keys in AWS object-store"""
+
 import argparse
 import json
+import boto3
 
 
 def list_s3_keys(bucket_name, deployment_id=""):
@@ -58,12 +63,13 @@ def save_keys_to_file(keys, output_file):
         keys (list): List of S3 keys.
         output_file (str): Path to the output file.
     """
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding='UTF-8') as f:
         for key in keys:
             f.write(key + "\n")
 
 
 def main():
+    """Passes user defined arguments to python functions."""  
     parser = argparse.ArgumentParser(
         description="Generate a file containing S3 keys from a bucket."
     )
