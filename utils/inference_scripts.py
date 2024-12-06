@@ -166,9 +166,9 @@ def perform_inf(
             if box_score < box_threshold:
                 continue
 
-            # if box height or width > half the image, skip
-            if box_width > original_width / 2 or box_height > original_height / 2:
-                continue
+            # # if box height or width > half the image, skip
+            # if box_width > original_width / 2 or box_height > original_height / 2:
+            #     continue
 
             # Crop the detected region and perform classification
             cropped_image = original_image.crop((x_min, y_min, x_max, y_max))
