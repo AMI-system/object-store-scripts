@@ -2,3 +2,12 @@
 .mypy_cache
 __pycache__
 *.log
+ami_pipeline/Lib/site-packages
+ami_pipeline/Scripts
+ami_pipeline/pyvenv.cfg
+credentials.json
+ami_pipeline
+northampton data BACKUP
+test_images
+credentials.json
+example_metadata.json

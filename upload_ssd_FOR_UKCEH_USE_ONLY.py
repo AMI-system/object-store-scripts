@@ -86,12 +86,8 @@ async def upload_files(session, name, bucket, dep_id, data_type, files):
         except Exception as e:
             print(f"Error getting presigned URL for {file_name}: {e}")
 
-    try:
-        await asyncio.gather(*tasks)
-    except Exception as e:
-        print(f"Error during upload: {e}. Pausing for 10 minutes...")
-        await asyncio.sleep(600)  # Pause for 600 seconds (10 minutes)
-        raise  # Re-raise the exception to trigger retry or terminate gracefully
+    # Directly gather tasks without additional error handling at this level
+    await asyncio.gather(*tasks)
 
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
 async def get_presigned_url(session, name, bucket, dep_id, data_type, file_name, file_type):
@@ -162,16 +158,24 @@ if __name__ == "__main__":
 
     # Specify your name, bucket, dep_id, and the SSD path containing data folders
     fullname = "Dylan Carbone"
-    bucket = "test-upload" # if you want to trial an upload to the test bucket, use 'test-upload'
-    dep_id = "dep_test" # if you want to trial an upload to the test bucket, use 'dep_test'
-    ssd_path = "C:/Users/dylcar/OneDrive - UKCEH/Desktop/AMI trial data"
-    batch_size = 10
+    bucket = "gbr" # if you want to trial an upload to the test bucket, use 'test-upload'
+    dep_id = "dep000070" # if you want to trial an upload to the test bucket, use 'dep_test'
+    ssd_path = "D:/"
+    
+    # Define adaptive batch sizes
+    batch_sizes = {
+        "snapshot_images": 30,
+        "audible_recordings": 20,
+        "ultrasound_recordings": 10
+    }
 
     data_paths = gather_files(ssd_path)
     
     async def main():
         for data_type, files in data_paths.items():
             if files:
+                # Get the batch size for the current data type
+                batch_size = batch_sizes.get(data_type)
                 await upload_files_in_batches(fullname, bucket, dep_id, data_type, files, batch_size)
             else:
                 print(f"No files found in {data_type} folder. Skipping.")
