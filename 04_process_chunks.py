@@ -17,6 +17,7 @@ transfer_config = TransferConfig(
     io_chunksize=262144,  # 256KB
 )
 
+
 def initialise_session(credentials_file="credentials.json"):
     """
     Load AWS and API credentials from a configuration file and initialise an AWS session.
@@ -136,7 +137,7 @@ def main(
 
     client = initialise_session(credentials_file)
 
-    keys = chunks[chunk_id]['keys']
+    keys = chunks[chunk_id]["keys"]
     download_and_analyse(
         keys=keys,
         output_dir=output_dir,
@@ -160,32 +161,90 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process a specific chunk of S3 keys.")
-    parser.add_argument("--chunk_id", required=True, help="ID of the chunk to process (e.g., 0, 1, 2, 3).")
-    parser.add_argument("--json_file", required=True, help="Path to the JSON file with key chunks.")
-    parser.add_argument("--output_dir", required=True, help="Directory to save downloaded files and analysis results.", default="./data/")
+    parser.add_argument(
+        "--chunk_id",
+        required=True,
+        help="ID of the chunk to process (e.g., 0, 1, 2, 3).",
+    )
+    parser.add_argument(
+        "--json_file", required=True, help="Path to the JSON file with key chunks."
+    )
+    parser.add_argument(
+        "--output_dir",
+        required=True,
+        help="Directory to save downloaded files and analysis results.",
+        default="./data/",
+    )
     parser.add_argument("--bucket_name", required=True, help="Name of the S3 bucket.")
-    parser.add_argument("--credentials_file", default="credentials.json", help="Path to AWS credentials file.")
-    parser.add_argument("--remove_image", action="store_true", help="Remove images after processing.")
-    parser.add_argument("--perform_inference", action="store_true", help="Enable inference.")
-    parser.add_argument("--save_crops", action="store_true", help="Whether to save the crops.")
-    parser.add_argument("--localisation_model_path", type=str, help="Path to the localisation model weights.", default="./models/v1_localizmodel_2021-08-17-12-06.pt")
+    parser.add_argument(
+        "--credentials_file",
+        default="credentials.json",
+        help="Path to AWS credentials file.",
+    )
+    parser.add_argument(
+        "--remove_image", action="store_true", help="Remove images after processing."
+    )
+    parser.add_argument(
+        "--perform_inference", action="store_true", help="Enable inference."
+    )
+    parser.add_argument(
+        "--save_crops", action="store_true", help="Whether to save the crops."
+    )
+    parser.add_argument(
+        "--localisation_model_path",
+        type=str,
+        help="Path to the localisation model weights.",
+        default="./models/v1_localizmodel_2021-08-17-12-06.pt",
+    )
     parser.add_argument(
         "--box_threshold",
         type=float,
         default=0.99,
         help="Threshold for the confidence score of bounding boxes. Default: 0.99",
     )
-    parser.add_argument("--binary_model_path", type=str, help="Path to the binary model weights.", default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth")
-    parser.add_argument("--order_model_path", type=str, help="Path to the order model weights.", default="./models/dhc_best_128.pth")
-    parser.add_argument("--order_labels", type=str, help="Path to the order labels file.")
-    parser.add_argument("--species_model_path", type=str, help="Path to the species model weights.", default="./models/turing-costarica_v03_resnet50_2024-06-04-16-17_state.pt")
-    parser.add_argument("--species_labels", type=str, help="Path to the species labels file.", 
-                       default="./models/03_costarica_data_category_map.json")
-    parser.add_argument("--device", type=str, default="cpu", help="Device to run inference on (e.g., cpu or cuda).")
-    parser.add_argument("--order_thresholds_path", type=str, help="Path to the order data thresholds file.", default="./models/thresholdsTestTrain.csv")
-    parser.add_argument("--csv_file", default="results.csv", help="Path to save analysis results.")
+    parser.add_argument(
+        "--binary_model_path",
+        type=str,
+        help="Path to the binary model weights.",
+        default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth",
+    )
+    parser.add_argument(
+        "--order_model_path",
+        type=str,
+        help="Path to the order model weights.",
+        default="./models/dhc_best_128.pth",
+    )
+    parser.add_argument(
+        "--order_labels", type=str, help="Path to the order labels file."
+    )
+    parser.add_argument(
+        "--species_model_path",
+        type=str,
+        help="Path to the species model weights.",
+        default="./models/turing-costarica_v03_resnet50_2024-06-04-16-17_state.pt",
+    )
+    parser.add_argument(
+        "--species_labels",
+        type=str,
+        help="Path to the species labels file.",
+        default="./models/03_costarica_data_category_map.json",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        help="Device to run inference on (e.g., cpu or cuda).",
+    )
+    parser.add_argument(
+        "--order_thresholds_path",
+        type=str,
+        help="Path to the order data thresholds file.",
+        default="./models/thresholdsTestTrain.csv",
+    )
+    parser.add_argument(
+        "--csv_file", default="results.csv", help="Path to save analysis results."
+    )
 
-    
     args = parser.parse_args()
 
     if torch.cuda.is_available():
@@ -200,17 +259,16 @@ if __name__ == "__main__":
             "\033[95m\033[1mCuda not available, using CPU "
             + "\N{Cross Mark}\033[0m\033[0m"
         )
-    
+
     models = load_models(
-        device, 
+        device,
         args.localisation_model_path,
         args.binary_model_path,
         args.order_model_path,
         args.order_thresholds_path,
         args.species_model_path,
-        args.species_labels
+        args.species_labels,
     )
-    
 
     main(
         chunk_id=args.chunk_id,
@@ -221,14 +279,14 @@ if __name__ == "__main__":
         remove_image=args.remove_image,
         save_crops=args.save_crops,
         perform_inference=args.perform_inference,
-        localisation_model=models['localisation_model'],
+        localisation_model=models["localisation_model"],
         box_threshold=args.box_threshold,
-        binary_model=models['classification_model'],
-        order_model=models['order_model'],
-        order_labels=models['order_model_labels'],
-        order_data_thresholds=models['order_model_thresholds'],
-        species_model=models['species_model'],
-        species_labels=models['species_model_labels'],
+        binary_model=models["classification_model"],
+        order_model=models["order_model"],
+        order_labels=models["order_model_labels"],
+        order_data_thresholds=models["order_model_thresholds"],
+        species_model=models["species_model"],
+        species_labels=models["species_model_labels"],
         device=device,
         csv_file=args.csv_file,
     )

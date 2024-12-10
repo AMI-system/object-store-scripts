@@ -175,6 +175,7 @@ def count_files(s3_client, bucket_name, prefix):
             all_keys = all_keys + [file_i]
     return count, all_keys
 
+
 def get_objects(
     session,
     aws_credentials,
@@ -210,7 +211,9 @@ def get_objects(
     keys = []
     for page in page_iterator:
         if os.path.basename(page.get("Contents", [])[0]["Key"]).startswith("$"):
-            print(f'{page.get("Contents", [])[0]["Key"]} is suspected corrupt, skipping')
+            print(
+                f'{page.get("Contents", [])[0]["Key"]} is suspected corrupt, skipping'
+            )
             continue
 
         for obj in page.get("Contents", []):
@@ -218,7 +221,7 @@ def get_objects(
 
     # don't rerun previously analysed images
     results_df = pd.read_csv(csv_file, dtype=str)
-    run_images = [re.sub(r'^.*?dep', 'dep', x) for x in results_df['image_path']]
+    run_images = [re.sub(r"^.*?dep", "dep", x) for x in results_df["image_path"]]
     keys = [x for x in keys if x not in run_images]
 
     # Divide the keys among workers
@@ -228,7 +231,10 @@ def get_objects(
     ]
 
     # Shared progress bar
-    progress_bar = tqdm.tqdm(total=total_files, desc=f"Download files for {os.path.basename(csv_file).replace('_results.csv', '')}")
+    progress_bar = tqdm.tqdm(
+        total=total_files,
+        desc=f"Download files for {os.path.basename(csv_file).replace('_results.csv', '')}",
+    )
 
     def process_chunk(chunk):
         for i in range(0, len(chunk), batch_size):
