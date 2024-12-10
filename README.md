@@ -63,24 +63,24 @@ Contact [Katriona Goldmann](kgoldmann@turing.ac.uk) for the AWS Access and UKCEH
 
 ## Usage
 
-Load the conda env:
+Load the conda env on Jasmin:
 
 ```bash
 source ~/miniforge3/bin/activate
 conda activate "~/conda_envs/moth_detector_env/"
 ```
 
-<!-- Inferences are run by country and deployment site. To run the script, for Costa Rica say, use the following command:
+_or on Baskerville_:
 
 ```bash
-python s3_download_with_inference.py \
-  --country "Costa Rica" \
-  --deployment "Forest Edge - EC4AB109" \
-  --data_storage_path "./data/harlequin/CostaRica" \
-  --num_workers 1
+module load bask-apps/live
+module load CUDA/11.7.0
+module load Python/3.9.5-GCCcore-10.3.0
+module load Miniforge3/24.1.2-0
+eval "$(${EBROOTMINIFORGE3}/bin/conda shell.bash hook)"
+source "${EBROOTMINIFORGE3}/etc/profile.d/mamba.sh"
+mamba activate "/bask/projects/v/vjgo8416-amber/moth_detector_env"
 ```
-
-To run for all deployments use `--deployment "All"` -->
 
 The multi-core pipeline is run in several steps: 
 
@@ -94,49 +94,44 @@ The multi-core pipeline is run in several steps:
 To find information about the available deployments you can use the print_deployments function. For all deployments: 
 
 ```bash
-python print_deployments.py --include_inactive
+python 01_print_deployments.py --include_inactive
 ```
 
 or for Costa Rica and Panama only: 
 
 ```bash
-python print_deployments.py \
+python 01_print_deployments.py \
   --subset_countries 'Costa Rica' 
-```
-
-For deployments of interest you can then run `s3_download_with_inference.py`, as above, where the `--deployment` argument is passed as the deployment key value. e.g.: 
-
-```bash
-python s3_download_with_inference.py \
-  --country "Costa Rica" \
-  --deployment "Garden - 3F1C4908"
 ```
 
 ### 02. Generating the Keys
 
 ```bash
-python 02_generate_keys.py --bucket 'cri' --deployment_id 'dep000031' --output_file './keys/dep000031_keys.txt'
+python 02_generate_keys.py --bucket 'sgp' --deployment_id 'dep000045' --output_file './keys/dep000045_keys.txt'
 ```
 
 ### 03. Pre-chop the Keys into Chunks
 
 ```bash
-python 03_pre_chop_files.py --input_file './keys/dep000031_keys.txt' --file_extension 'jpg|jpeg' --chunk_size 100 --output_file './keys/dep000031_workload_chunks.json'
+python 03_pre_chop_files.py --input_file './keys/dep000045_keys.txt' --file_extensions 'jpg' 'jpeg' --chunk_size 100 --output_file './keys/dep000045_workload_chunks.json'
 ```
 
 ### 04. Process the Chunked Files
 
+For a single chunk:
+
 ```bash
 python 04_process_chunks.py \
   --chunk_id 1 \
-  --json_file './keys/dep000031_workload_chunks.json' \
-  --output_dir './data/dep000031' \
-  --bucket_name 'cri' \
+  --json_file './keys/dep000045_workload_chunks.json' \
+  --output_dir './data/dep000045' \
+  --bucket_name 'sgp' \
   --credentials_file './credentials.json' \
   --perform_inference \
-  --remove_image
+  --remove_image \
+  --save_crops \
+  --box_threshold 0.7
 ```
-
 
 ## Running with slurm
 

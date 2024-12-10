@@ -1,5 +1,6 @@
 import torch
 import pandas as pd
+import os
 from PIL import Image, ImageDraw
 import torchvision.transforms as transforms
 import numpy as np
@@ -8,6 +9,27 @@ import warnings
 
 # ignore the pandas Future Warning
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
+
+def classify_species(image_tensor, regional_model, regional_category_map, top_n=5):
+    """
+    Classify the species of the moth using the regional model.
+    """
+
+    # print('Inference for species...')
+    output = regional_model(image_tensor)
+    predictions = torch.nn.functional.softmax(output, dim=1).cpu().detach().numpy()[0]
+
+    # Sort predictions to get the indices of the top 5 scores
+    top_n_indices = predictions.argsort()[-top_n:][::-1]  
+
+    # Map indices to labels and fetch their confidence scores
+    index_to_label = {index: label for label, index in regional_category_map.items()}
+    top_n_labels = [index_to_label[idx] for idx in top_n_indices]
+    top_n_scores = [predictions[idx] for idx in top_n_indices]
+
+    return top_n_labels, top_n_scores
+    
 
 def classify_order(image_tensor, order_model, order_labels, order_data_thresholds):
     """
@@ -26,6 +48,7 @@ def classify_order(image_tensor, order_model, order_labels, order_data_threshold
     label = order_labels[predicted_label]
 
     return label, score
+
 
 def classify_box(image_tensor, binary_model):
     """
@@ -54,19 +77,21 @@ def perform_inf(
     binary_model,
     order_model,
     order_labels,
-    country,
-    region,
-    device,
+    regional_model,
+    regional_category_map,
+    proc_device,
     order_data_thresholds,
     csv_file,
     save_crops,
-    box_threshold=0.99
+    box_threshold=0.995, 
+    top_n=5
 ):
     """
     Perform inferences on an image including:
       - object detection
       - object classification
       - order classification
+      - species classification
     """
 
     transform_loc = transforms.Compose(
@@ -90,7 +115,7 @@ def perform_inf(
             "bucket_name",
             "analysis_datetime",
             "box_score",
-            "bix_label",
+            "box_label",
             "x_min",
             "y_min",
             "x_max",
@@ -99,16 +124,15 @@ def perform_inf(
             "class_confidence",  # binary class info
             "order_name",
             "order_confidence",  # order info
-            "cropped_image_path",
-        ]
-
+            "cropped_image_path"] 
+    all_cols = all_cols + ["top_" + str(i+1) + "_species" for i in range(top_n)] + ["top_" + str(i+1) + "_confidence" for i in range(top_n)]
 
     image = Image.open(image_path).convert("RGB")
     original_image = image.copy()
     original_width, original_height = image.size
 
     # print('Inference for localisation...')
-    input_tensor = transform_loc(image).unsqueeze(0).to(device)
+    input_tensor = transform_loc(image).unsqueeze(0).to(proc_device)
 
     all_boxes = pd.DataFrame(
         columns=all_cols
@@ -125,28 +149,19 @@ def perform_inf(
                     [
                         image_path,
                         bucket_name,
-                        str(datetime.now()),
-                        'None',
-                        'None',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                    ]
+                        str(datetime.now())
+                    ] + [''] * (len(all_cols) - 3),
+                        
                 ],
                 columns=all_cols,
             )
             if not df.empty:
                 all_boxes = pd.concat([all_boxes, df])
+
             df.to_csv(
                 f'{csv_file}',
                 mode="a",
-                header=False,
+                header=not os.path.isfile(csv_file),
                 index=False,
             )
 
@@ -168,28 +183,34 @@ def perform_inf(
                 continue
 
             # if box height or width > half the image, skip
-            if box_width > original_width / 2 or box_height > original_height / 2:
-                continue
+            # if box_width > original_width / 2 or box_height > original_height / 2:
+            #    continue
 
             # Crop the detected region and perform classification
             cropped_image = original_image.crop((x_min, y_min, x_max, y_max))
-            cropped_tensor = transform_species(cropped_image).unsqueeze(0).to(device)
+            cropped_tensor = transform_species(cropped_image).unsqueeze(0).to(proc_device)
 
             class_name, class_confidence = classify_box(cropped_tensor, binary_model)
             order_name, order_confidence = classify_order(
                 cropped_tensor, order_model, order_labels, order_data_thresholds
             )
 
+            # Annotate image with bounding box and class
+            if class_name == "moth" or "Lepidoptera" in order_name:
+                species_names, species_confidences = classify_species(
+                    cropped_tensor, regional_model, regional_category_map, top_n
+                )
+
+            else:
+                species_names, species_confidences = [''] * top_n, [''] * top_n
+
+
             # if save_crops then save the cropped image
             crop_path = ""
-            if order_name == "Coleoptera" or order_name == 'Heteroptera' or order_name == 'Hemiptera':
-
-                if save_crops:
-                    crop_path = image_path.split(".")[0] + f"_crop{i}.jpg"
-                    cropped_image.save(crop_path)
-
-                print(f"Potential beetle: {crop_path}")
-
+            if save_crops:
+                crop_path =  image_path.replace(".jpg", f"_crop{i}.jpg")
+                cropped_image.save(crop_path)
+            
             # append to csv with pandas
             df = pd.DataFrame(
                 [
@@ -207,8 +228,8 @@ def perform_inf(
                         class_confidence,
                         order_name,
                         order_confidence,
-                        crop_path,
-                    ]
+                        crop_path                        
+                    ] + species_names + species_confidences
                 ],
                 columns=all_cols,
             )
@@ -218,7 +239,7 @@ def perform_inf(
             df.to_csv(
                 f'{csv_file}',
                 mode="a",
-                header=False,
+                header=not os.path.isfile(csv_file),
                 index=False,
             )
 

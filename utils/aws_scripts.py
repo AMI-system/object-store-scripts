@@ -14,6 +14,7 @@ import re
 def list_objects(session, bucket_name, prefix):
     """
     List all objects in an S3 bucket with a specific prefix.
+    """
 
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
@@ -79,7 +80,7 @@ def download_object(
                 order_labels=order_labels,
                 country=country,
                 region=region,
-                device=device,
+                proc_device=device,
                 order_data_thresholds=order_data_thresholds,
                 csv_file=csv_file,
                 save_crops=save_crops,

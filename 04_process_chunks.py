@@ -2,10 +2,11 @@ import argparse
 import boto3
 import json
 import os
-from utils.inference_scripts import perform_inf
 from boto3.s3.transfer import TransferConfig
 import torch
+
 from utils.custom_models import load_models
+from utils.inference_scripts import perform_inf
 
 
 # Transfer configuration for optimised S3 download
@@ -44,7 +45,9 @@ def download_and_analyse(
     client,
     remove_image=True,
     perform_inference=True,
+    save_crops=False,
     localisation_model=None,
+    box_threshold=0.99,
     binary_model=None,
     order_model=None,
     order_labels=None,
@@ -79,15 +82,16 @@ def download_and_analyse(
                 local_path,
                 bucket_name=bucket_name,
                 loc_model=localisation_model,
+                box_threshold=box_threshold,
                 binary_model=binary_model,
                 order_model=order_model,
                 order_labels=order_labels,
                 regional_model=species_model,
                 regional_category_map=species_labels,
-                device=device,
+                proc_device=device,
                 order_data_thresholds=order_data_thresholds,
                 csv_file=csv_file,
-                save_crops=True,
+                save_crops=save_crops,
             )
         # Remove the image if cleanup is enabled
         if remove_image:
@@ -102,7 +106,9 @@ def main(
     credentials_file="credentials.json",
     remove_image=True,
     perform_inference=True,
+    save_crops=False,
     localisation_model=None,
+    box_threshold=0.99,
     binary_model=None,
     order_model=None,
     order_labels=None,
@@ -138,7 +144,9 @@ def main(
         client=client,
         remove_image=remove_image,
         perform_inference=perform_inference,
+        save_crops=save_crops,
         localisation_model=localisation_model,
+        box_threshold=box_threshold,
         binary_model=binary_model,
         order_model=order_model,
         order_labels=order_labels,
@@ -159,7 +167,14 @@ if __name__ == "__main__":
     parser.add_argument("--credentials_file", default="credentials.json", help="Path to AWS credentials file.")
     parser.add_argument("--remove_image", action="store_true", help="Remove images after processing.")
     parser.add_argument("--perform_inference", action="store_true", help="Enable inference.")
+    parser.add_argument("--save_crops", action="store_true", help="Whether to save the crops.")
     parser.add_argument("--localisation_model_path", type=str, help="Path to the localisation model weights.", default="./models/v1_localizmodel_2021-08-17-12-06.pt")
+    parser.add_argument(
+        "--box_threshold",
+        type=float,
+        default=0.99,
+        help="Threshold for the confidence score of bounding boxes. Default: 0.99",
+    )
     parser.add_argument("--binary_model_path", type=str, help="Path to the binary model weights.", default="./models/moth-nonmoth-effv2b3_20220506_061527_30.pth")
     parser.add_argument("--order_model_path", type=str, help="Path to the order model weights.", default="./models/dhc_best_128.pth")
     parser.add_argument("--order_labels", type=str, help="Path to the order labels file.")
@@ -188,12 +203,12 @@ if __name__ == "__main__":
     
     models = load_models(
         device, 
-        getattr(args, 'localisation_model_path'), 
-        getattr(args, 'binary_model_path'), 
-        getattr(args, 'order_model_path'), 
-        getattr(args, 'order_thresholds_path'), 
-        getattr(args, 'species_model_path'), 
-        getattr(args, 'species_labels')
+        args.localisation_model_path,
+        args.binary_model_path,
+        args.order_model_path,
+        args.order_thresholds_path,
+        args.species_model_path,
+        args.species_labels
     )
     
 
@@ -204,8 +219,10 @@ if __name__ == "__main__":
         bucket_name=args.bucket_name,
         credentials_file=args.credentials_file,
         remove_image=args.remove_image,
+        save_crops=args.save_crops,
         perform_inference=args.perform_inference,
         localisation_model=models['localisation_model'],
+        box_threshold=args.box_threshold,
         binary_model=models['classification_model'],
         order_model=models['order_model'],
         order_labels=models['order_model_labels'],
