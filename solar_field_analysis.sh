@@ -69,8 +69,7 @@ python 04_process_chunks.py \
   --credentials_file "$credentials_file" \
   --csv_file "$output_base_dir/${deployment_id}.csv" \
   --localisation_model_path ./models/fasterrcnn_resnet50_fpn_tz53qv9v.pt \
-  --species_model_path ./models/turing-_state.pt \ 
-  amber/projects/object-store-scripts/models/turing-uk_v03_resnet50_2024-05-13-10-03_state(4).pt
+  --species_model_path "./models/turing-uk_v03_resnet50_2024-05-13-10-03_state(4).pt" \
   --species_labels ./models/03_uk_data_category_map.json \
   --perform_inference \
   --save_crops \
