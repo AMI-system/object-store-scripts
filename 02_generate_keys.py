@@ -1,6 +1,7 @@
 import boto3
 import argparse
 import json
+import os
 
 
 def list_s3_keys(bucket_name, deployment_id=""):
@@ -57,7 +58,7 @@ def save_keys_to_file(keys, output_file):
     Parameters:
         keys (list): List of S3 keys.
         output_file (str): Path to the output file.
-    """
+    """    
     with open(output_file, "w") as f:
         for key in keys:
             f.write(key + "\n")
@@ -89,6 +90,11 @@ def main():
         f"Listing keys from bucket '{args.bucket}' with deployment '{args.deployment_id}'..."
     )
     keys = list_s3_keys(args.bucket, args.deployment_id)
+
+    # create dir if not existant
+    dirname = os.path.dirname(args.output_file)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
 
     # Save keys to the output file
     save_keys_to_file(keys, args.output_file)

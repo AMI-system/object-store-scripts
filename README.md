@@ -97,11 +97,11 @@ To find information about the available deployments you can use the print_deploy
 python 01_print_deployments.py --include_inactive
 ```
 
-or for Costa Rica and Panama only: 
+or for the UK only: 
 
 ```bash
 python 01_print_deployments.py \
-  --subset_countries 'Costa Rica' 
+  --subset_countries 'United Kingdom' 
 ```
 
 ### 02. Generating the Keys
@@ -129,7 +129,7 @@ python 04_process_chunks.py \
   --credentials_file './credentials.json' \
   --csv_file 'dep000072.csv' \
   --localisation_model_path ./models/fasterrcnn_resnet50_fpn_tz53qv9v.pt \
-  --species_model_path ./models/turing-uk_v03_resnet50_2024-05-13-10-03_state.pt \ 
+  --species_model_path ./models/turing-uk_v03_resnet50_2024-05-13-10-03_state.pt \
   --species_labels ./models/03_uk_data_category_map.json \
   --perform_inference \
   --remove_image \

@@ -79,6 +79,11 @@ def main():
     # Split the workload into chunks
     chunks = split_workload(keys, args.chunk_size)
 
+    # create dir if not existant
+    dirname = os.path.dirname(args.output_file)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+
     # Save the chunks to a JSON file
     save_chunks(chunks, args.output_file)
 
