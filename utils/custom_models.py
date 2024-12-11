@@ -83,7 +83,6 @@ def load_models(
 ):
 
     # Load the localisation model
-    print("loading localisation")
     weights_path = localisation_model_path
 
     model_loc = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=None)
@@ -101,7 +100,6 @@ def load_models(
     model_loc.eval()
 
     # Load the binary model
-    print("loading binary")
     weights_path = binary_model_path
     classification_model = timm.create_model(
         "tf_efficientnetv2_b3", num_classes=num_classes, weights=None
@@ -113,7 +111,6 @@ def load_models(
     classification_model.eval()
 
     # Load the order model
-    print("loading order")
     savedWeights = order_model_path
     thresholdFile = order_threshold_path
     order_data_thresholds = pd.read_csv(thresholdFile)
@@ -127,7 +124,6 @@ def load_models(
     model_order.eval()
 
     # Load the species classifier model
-    print("loading species")
     weights = species_model_path
     species_category_map = json.load(open(species_labels))
     num_classes = len(species_category_map)
