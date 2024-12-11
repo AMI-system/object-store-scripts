@@ -56,6 +56,7 @@ def download_and_analyse(
     species_labels=None,
     device=None,
     order_data_thresholds=None,
+    top_n=5,
     csv_file="results.csv",
 ):
     """
@@ -92,7 +93,8 @@ def download_and_analyse(
                 proc_device=device,
                 order_data_thresholds=order_data_thresholds,
                 csv_file=csv_file,
-                save_crops=save_crops,
+                top_n=top_n,
+                save_crops=save_crops
             )
         # Remove the image if cleanup is enabled
         if remove_image:
@@ -117,6 +119,7 @@ def main(
     species_labels=None,
     device=None,
     order_data_thresholds=None,
+    top_n=5,
     csv_file="results.csv",
 ):
     """
@@ -155,6 +158,7 @@ def main(
         species_labels=species_labels,
         device=device,
         order_data_thresholds=order_data_thresholds,
+        top_n=top_n,
         csv_file=csv_file,
     )
 
@@ -242,6 +246,12 @@ if __name__ == "__main__":
         default="./models/thresholdsTestTrain.csv",
     )
     parser.add_argument(
+        "--top_n_species",
+        type=int,
+        help="The number of predictions to output.",
+        default=5,
+    )
+    parser.add_argument(
         "--csv_file", default="results.csv", help="Path to save analysis results."
     )
 
@@ -288,5 +298,6 @@ if __name__ == "__main__":
         species_model=models["species_model"],
         species_labels=models["species_model_labels"],
         device=device,
+        top_n=args.top_n_species,
         csv_file=args.csv_file,
     )

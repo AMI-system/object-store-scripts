@@ -107,13 +107,13 @@ python 01_print_deployments.py \
 ### 02. Generating the Keys
 
 ```bash
-python 02_generate_keys.py --bucket 'sgp' --deployment_id 'dep000045' --output_file './keys/dep000045_keys.txt'
+python 02_generate_keys.py --bucket 'gbr' --deployment_id 'dep000072' --output_file './keys/solar/dep000072_keys.txt'
 ```
 
 ### 03. Pre-chop the Keys into Chunks
 
 ```bash
-python 03_pre_chop_files.py --input_file './keys/dep000045_keys.txt' --file_extensions 'jpg' 'jpeg' --chunk_size 100 --output_file './keys/dep000045_workload_chunks.json'
+python 03_pre_chop_files.py --input_file './keys/solar/dep000072_keys.txt' --file_extensions 'jpg' 'jpeg' --chunk_size 100 --output_file './keys/solar/dep000072_workload_chunks.json'
 ```
 
 ### 04. Process the Chunked Files
@@ -123,24 +123,27 @@ For a single chunk:
 ```bash
 python 04_process_chunks.py \
   --chunk_id 1 \
-  --json_file './keys/dep000045_workload_chunks.json' \
-  --output_dir './data/dep000045' \
-  --bucket_name 'sgp' \
+  --json_file './keys/solar/dep000072_workload_chunks.json' \
+  --output_dir './data/solar/dep000072' \
+  --bucket_name 'gbr' \
   --credentials_file './credentials.json' \
+  --csv_file 'dep000072.csv' \
+  --localisation_model_path ./models/fasterrcnn_resnet50_fpn_tz53qv9v.pt \
+  --species_model_path ./models/turing-uk_v03_resnet50_2024-05-13-10-03_state.pt \ 
+  --species_labels ./models/03_uk_data_category_map.json \
   --perform_inference \
   --remove_image \
-  --save_crops \
-  --box_threshold 0.7
+  --save_crops
 ```
 
 ## Running with slurm
 
 To run with slurm you need to be logged in on the [scientific nodes](https://help.jasmin.ac.uk/docs/interactive-computing/sci-servers/). 
 
-It is recommended you set up a shell script to runfor your country and deployment of interest. For example, `cr_analysis.sh` peformes inferences for Costa Rica's Garden - 3F1C4908 deployment. You can run this using: 
+It is recommended you set up a shell script to runfor your country and deployment of interest. For example, `solar_field_analysis.sh` peformes inferences for the UK's Solar 1 panels deployment. You can run this using: 
 
 ```bash
-sbatch harlequin_costarica.sh
+sbatch solar_field_analysis.sh
 ```
 
 Note to run slurm you will need to install miniforge on the scientific nodes. 

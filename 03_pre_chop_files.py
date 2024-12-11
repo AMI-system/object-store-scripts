@@ -15,6 +15,7 @@ def load_workload(input_file, file_extensions):
 
     # remove corrupt keys
     subset_keys = [x for x in subset_keys if not os.path.basename(x).startswith("$")]
+    subset_keys = [x for x in subset_keys if not os.path.basename(x).startswith(".")]
 
     # remove keys uploaded from the recycle bin (legacy code)
     subset_keys = [x for x in subset_keys if "recycle" not in x]

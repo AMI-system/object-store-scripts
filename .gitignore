@@ -9,3 +9,5 @@ credentials.json
 data/
 models/
 keys/
+**/*.jpg
+**/*.csv
