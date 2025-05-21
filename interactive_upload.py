@@ -13,15 +13,13 @@ import pathlib
 import asyncio
 import nest_asyncio
 import requests
-from requests.auth import HTTPBasicAuth
 import aiohttp
-from aiohttp import BasicAuth, ClientTimeout, FormData
+from aiohttp import ClientTimeout, FormData
 from tenacity import retry, wait_fixed, stop_after_attempt
 import tqdm.asyncio
 
 # Apply nested asyncio to allow event loops to run inside Jupyter notebooks or other nested environments.
 nest_asyncio.apply()
-
 
 # Global variables to store credentials
 GLOBAL_USERNAME = None
@@ -95,7 +93,7 @@ def display_menu():
     # Fix to exclude recycle bin
     files = [
         file for file in directory_path.rglob(f"*{extension}")
-        if "$RECYCLE.BIN" not in str(file) and ".Trashes" not in str(file)
+        if all(excluded not in str(file) for excluded in ["$RECYCLE.BIN", ".Trashes", ".Trash-0"])
     ]
 
     print("\nReview Your Input")
@@ -153,10 +151,17 @@ def prompt_next_action():
             print("Invalid choice. Please try again.")
 
 
+# def get_file_info(file_path):
+#     """Get file information including name, content, and type."""
+#     filename = os.path.basename(file_path)
+#     file_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+#     return filename, file_type
+
 def get_file_info(file_path):
     """Get file information including name, content, and type."""
-    filename = os.path.basename(file_path)
-    file_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+    file_path_str = str(file_path)  # convert to string
+    filename = os.path.basename(file_path_str)
+    file_type = mimetypes.guess_type(file_path_str)[0] or "application/octet-stream"
     return filename, file_type
 
 
@@ -164,9 +169,12 @@ def get_deployments():
     """Fetch deployments from the API with authentication."""
     try:
         url = "https://connect-apps.ceh.ac.uk/ami-data-upload/get-deployments/"
-        response = requests.get(
-            url, auth=HTTPBasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD), timeout=600
-        )
+        data = {
+            "username": GLOBAL_USERNAME,
+            "password": GLOBAL_PASSWORD
+        }
+        response = requests.post(url, data=data, timeout=600)
+
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as err:
@@ -243,14 +251,14 @@ async def check_file_exist(session, name, bucket, dep_id, data_type, file_path):
     url = "https://connect-apps.ceh.ac.uk/ami-data-upload/check-file-exist/"
     file_name, _ = get_file_info(file_path)
     data = FormData()
-    data.add_field("name", name)
-    data.add_field("country", bucket)
-    data.add_field("deployment", dep_id)
-    data.add_field("data_type", data_type)
-    data.add_field("filename", file_name)
+    data.add_field("name", str(name))
+    data.add_field("country", str(bucket))
+    data.add_field("deployment", str(dep_id))
+    data.add_field("data_type", str(data_type))
+    data.add_field("filename", str(file_name))
 
     async with session.post(
-        url, auth=BasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD), data=data
+        url, data=data
     ) as response:
         response.raise_for_status()
         exist = await response.json()
@@ -282,15 +290,17 @@ async def get_presigned_url(
     url = "https://connect-apps.ceh.ac.uk/ami-data-upload/generate-presigned-url/"
 
     data = FormData()
-    data.add_field("name", name)
-    data.add_field("country", bucket)
-    data.add_field("deployment", dep_id)
-    data.add_field("data_type", data_type)
-    data.add_field("filename", file_name)
-    data.add_field("file_type", file_type)
+    data.add_field("name", str(name))
+    data.add_field("country", str(bucket))
+    data.add_field("deployment", str(dep_id))
+    data.add_field("data_type", str(data_type))
+    data.add_field("filename", str(file_name))
+    data.add_field("file_type", str(file_type))
+    data.add_field("username", str(GLOBAL_USERNAME))
+    data.add_field("password", str(GLOBAL_PASSWORD))
 
     async with session.post(
-        url, auth=BasicAuth(GLOBAL_USERNAME, GLOBAL_PASSWORD), data=data
+        url, data=data
     ) as response:
         response.raise_for_status()
         return await response.json()
