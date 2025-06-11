@@ -77,9 +77,19 @@ def display_menu():
         ]
         deployment = get_choice("\nDeployments:", country_deployments)
 
-    data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
+    # Conditional data type options based on country
+    if country.strip().lower() != "united kingdom (saltmarsh soundscapes)":
+        data_types = ["snapshot_images", "audible_recordings", "ultrasound_recordings"]
+    else:
+        data_types = ["terrestrial_recordings", "aquatic_recordings"]
+
     data_type = get_choice("\nData type:", data_types)
-    extension = ".jpg" if data_type == "snapshot_images" else ".wav"
+
+    # Determine file extension from selected data_type
+    if data_type == "snapshot_images":
+        extension = ".jpg"
+    else:
+        extension = ".wav"
 
     print("\nSelect Directory:")
     while True:
@@ -149,13 +159,6 @@ def prompt_next_action():
             sys.exit(0)
         else:
             print("Invalid choice. Please try again.")
-
-
-# def get_file_info(file_path):
-#     """Get file information including name, content, and type."""
-#     filename = os.path.basename(file_path)
-#     file_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-#     return filename, file_type
 
 def get_file_info(file_path):
     """Get file information including name, content, and type."""
@@ -271,9 +274,7 @@ async def upload_files(session, name, bucket, dep_id, data_type, files):
     for file_path in files:
         file_name, file_type = get_file_info(file_path)
         try:
-            presigned_url = await get_presigned_url(
-                session, name, bucket, dep_id, data_type, file_name, file_type
-            )
+            presigned_url = await get_presigned_url(session, name, bucket, dep_id, data_type, file_name, file_type)
             task = upload_file_to_s3(session, presigned_url, file_path, file_type)
             tasks.append(task)
         except Exception as e:

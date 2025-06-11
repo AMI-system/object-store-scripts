@@ -11,13 +11,13 @@ import mimetypes
 import asyncio
 import pathlib
 import aiohttp
-from aiohttp import BasicAuth, ClientTimeout, FormData
+from aiohttp import BasicAuth, ClientTimeout, FormData, ClientResponseError
 from tenacity import retry, wait_fixed, stop_after_attempt
 import tqdm.asyncio
 
 # Replace these with actual credentials
-USERNAME = "aimappuser"
-PASSWORD = "Osd7r0I9hkFWLY0Eqoia"
+GLOBAL_USERNAME = "aimappuser".strip()
+GLOBAL_PASSWORD = "Osd7r0I9hkFWLY0Eqoia".strip()
 
 async def upload_files_in_batches(name, bucket, dep_id, data_type, files, batch_size=100):
     """Upload files in batches with a second check after the first upload."""
@@ -61,6 +61,7 @@ async def check_files(session, name, bucket, dep_id, data_type, files, progress_
 async def check_file_exist(session, name, bucket, dep_id, data_type, file_path):
     """Check if files exists in the object store already."""
     url = "https://connect-apps.ceh.ac.uk/ami-data-upload/check-file-exist/"
+
     file_name, _ = get_file_info(file_path)
     data = FormData()
     data.add_field("name", name)
@@ -68,8 +69,10 @@ async def check_file_exist(session, name, bucket, dep_id, data_type, file_path):
     data.add_field("deployment", dep_id)
     data.add_field("data_type", data_type)
     data.add_field("filename", file_name)
-
-    async with session.post(url, auth=BasicAuth(USERNAME, PASSWORD), data=data) as response:
+    data.add_field("username", GLOBAL_USERNAME)  # ← add this
+    data.add_field("password", GLOBAL_PASSWORD)  # ← and this
+    
+    async with session.post(url, data=data) as response:
         response.raise_for_status()
         exist = await response.json()
         return exist["exists"]
@@ -90,7 +93,9 @@ async def upload_files(session, name, bucket, dep_id, data_type, files):
     await asyncio.gather(*tasks)
 
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
-async def get_presigned_url(session, name, bucket, dep_id, data_type, file_name, file_type):
+async def get_presigned_url(
+    session, name, bucket, dep_id, data_type, file_name, file_type
+):
     """Get a presigned URL for file upload."""
     url = "https://connect-apps.ceh.ac.uk/ami-data-upload/generate-presigned-url/"
 
@@ -101,21 +106,30 @@ async def get_presigned_url(session, name, bucket, dep_id, data_type, file_name,
     data.add_field("data_type", data_type)
     data.add_field("filename", file_name)
     data.add_field("file_type", file_type)
+    data.add_field("username", GLOBAL_USERNAME)
+    data.add_field("password", GLOBAL_PASSWORD)
 
-    async with session.post(url, auth=BasicAuth(USERNAME, PASSWORD), data=data) as response:
+    async with session.post(
+        url, data=data
+    ) as response:
         response.raise_for_status()
         return await response.json()
 
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
 async def upload_file_to_s3(session, presigned_url, file_path, file_type):
-    """Upload file content to S3 using the presigned URL."""
     headers = {"Content-Type": file_type}
     try:
         with open(file_path, "rb") as file:
-            data = file.read()
-            async with session.put(presigned_url, data=data, headers=headers) as response:
-                response.raise_for_status()
+            async with session.put(presigned_url, data=file, headers=headers) as response:
+                response.raise_for_status()  # Raise exception for HTTP errors
                 await response.text()
+    except ClientResponseError as e:
+        if e.status == 504:
+            print("The object store service is taking too long to respond to the API. Please continue the upload.")
+        elif e.status == 408:
+            print("Your upload speed is slow. Please continue the upload.")
+        else:
+            print(f"HTTP Error {e.status}: {e.message}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
@@ -135,7 +149,7 @@ def gather_files(ssd_path):
         valid_files = []
         for file in file_list:
             try:
-                if "$RECYCLE.BIN" not in str(file) and ".Trashes" not in str(file):
+                if "$RECYCLE.BIN" not in str(file) and ".Trashes" not in str(file) and ".Trash-0" not in str(file):
                     if os.path.getsize(file) >= 10 * 1024:  # File size >= 10 KB
                         valid_files.append(file)
             except OSError as e:
@@ -143,7 +157,7 @@ def gather_files(ssd_path):
         return valid_files
 
     paths = {
-        "snapshot_images": filter_recycle_bin_and_small_files(list(pathlib.Path(ssd_path, "images").rglob("*.jpg"))),
+        "snapshot_images": filter_recycle_bin_and_small_files(list(pathlib.Path(ssd_path).rglob("*.jpg"))),
         "audible_recordings": filter_recycle_bin_and_small_files(list(pathlib.Path(ssd_path, "audio").rglob("*.wav"))),
         "ultrasound_recordings": filter_recycle_bin_and_small_files(list(pathlib.Path(ssd_path, "ultrasonic").rglob("*.wav")))
     }
@@ -159,8 +173,14 @@ if __name__ == "__main__":
     # Specify your name, bucket, dep_id, and the SSD path containing data folders
     fullname = "Dylan Carbone"
     bucket = "gbr" # if you want to trial an upload to the test bucket, use 'test-upload'
-    dep_id = "dep000070" # if you want to trial an upload to the test bucket, use 'dep_test'
-    ssd_path = "D:/"
+    dep_id = "dep000058" # if you want to trial an upload to the test bucket, use 'dep_test'
+    ssd_path = r"D:\teams agzero data\Wiltshire - Manor farm"
+
+    # # Specify your name, bucket, dep_id, and the SSD path containing data folders
+    # fullname = "Dylan Carbone"
+    # bucket = "aia" # if you want to trial an upload to the test bucket, use 'test-upload'
+    # dep_id = "dep000099" # if you want to trial an upload to the test bucket, use 'dep_test'
+    # ssd_path = "E:/"
     
     # Define adaptive batch sizes
     batch_sizes = {

@@ -33,8 +33,8 @@ def delete_file_from_bucket(obj):
 
 ##################
 # BUCKET = s3_client.Bucket("test-upload")
-BUCKET = s3_client.Bucket("gbr") # to clear test, use: test-upload
-PREFIX = "dep000063" # deployment_id/data_type to clear test, use: dep_test
+BUCKET = s3_client.Bucket("saltmarsh-soundscapes") # to clear test, use: test-upload
+PREFIX = "dep000110" # deployment_id/data_type - to clear test, use: dep_test
 ##################
 
 # Create a ThreadPoolExecutor

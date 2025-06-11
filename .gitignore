@@ -9,5 +9,6 @@ credentials.json
 ami_pipeline
 northampton data BACKUP
 test_images
-credentials.json
 example_metadata.json
+useful commands for upload from pi.txt
+username password.txt
